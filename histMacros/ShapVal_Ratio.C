@@ -1,0 +1,73 @@
+{
+//========= Macro generated from object: Shape Validation/PionTriplet_MassInv {(PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, (abs(PionTriplet_charge) == 3) && (abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && (PionTriplet_LowestDeepTauVsEl >= 3) && (PionTriplet_LowestDeepTauVsMu >= 15) && (PionTriplet_LowestDeepTauVsJet >= 1) && (PionTriplet_pion3_iso >= 0) && ((PionTriplet_pion3_iso < 0.1)) && ((PionTriplet_LowestDeepTauVsJet >= 31)))) && Trigger_ditau && !LeptonVeto && (abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && (abs(PionTriplet_charge) == 3) && (PionTriplet_LowestDeepTauVsEl >= 3) && (PionTriplet_LowestDeepTauVsMu >= 15) && (PionTriplet_LowestDeepTauVsJet >= 1) && (PionTriplet_pion3_iso >= 0) && (PionTriplet_pt>40) && ((PionTriplet_pion3_iso < 0.1)) && ((PionTriplet_LowestDeepTauVsJet >= 31))}
+//========= by ROOT version6.19/01
+   
+   TH1F *ShapesPValidation__4 = new TH1F("ShapesPValidation__4","PionTriplet_MassInv {(PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, (abs(PionTriplet_charge) == 3) && (abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && (PionTriplet_LowestDeepTauVsEl >= 3) && (PionTriplet_LowestDeepTauVsMu >= 15) && (PionTriplet_LowestDeepTauVsJet >= 1) && (PionTriplet_pion3_iso >= 0) && ((PionTriplet_pion3_iso < 0.1)) && ((PionTriplet_LowestDeepTauVsJet >= 31)))) && Trigger_ditau && !LeptonVeto && (abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && (abs(PionTriplet_charge) == 3) && (PionTriplet_LowestDeepTauVsEl >= 3) && (PionTriplet_LowestDeepTauVsMu >= 15) && (PionTriplet_LowestDeepTauVsJet >= 1) && (PionTriplet_pion3_iso >= 0) && (PionTriplet_pt>40) && ((PionTriplet_pion3_iso < 0.1)) && ((PionTriplet_LowestDeepTauVsJet >= 31))}",40,0,400);
+   ShapesPValidation__4->SetBinContent(4,0.254441);
+   ShapesPValidation__4->SetBinContent(5,0.285047);
+   ShapesPValidation__4->SetBinContent(6,0.315728);
+   ShapesPValidation__4->SetBinContent(7,0.0445848);
+   ShapesPValidation__4->SetBinContent(8,0.224767);
+   ShapesPValidation__4->SetBinContent(9,0.0149077);
+   ShapesPValidation__4->SetBinContent(10,0.185738);
+   ShapesPValidation__4->SetBinContent(11,0.154513);
+   ShapesPValidation__4->SetBinContent(12,0.325928);
+   ShapesPValidation__4->SetBinContent(13,0.493461);
+   ShapesPValidation__4->SetBinContent(14,0.0047606);
+   ShapesPValidation__4->SetBinContent(15,-0.127868);
+   ShapesPValidation__4->SetBinContent(16,0.12376);
+   ShapesPValidation__4->SetBinContent(17,-0.000117985);
+   ShapesPValidation__4->SetBinContent(18,0.43696);
+   ShapesPValidation__4->SetBinContent(19,0.211532);
+   ShapesPValidation__4->SetBinContent(20,-0.000522552);
+   ShapesPValidation__4->SetBinContent(21,0.611937);
+   ShapesPValidation__4->SetBinContent(22,1.0751);
+   ShapesPValidation__4->SetBinContent(25,0.24128);
+   ShapesPValidation__4->SetBinContent(28,0.558945);
+   ShapesPValidation__4->SetBinContent(29,0.500609);
+   ShapesPValidation__4->SetBinContent(39,0.00158505);
+   ShapesPValidation__4->SetBinContent(41,-1.05556);
+   ShapesPValidation__4->SetBinError(4,0.201992);
+   ShapesPValidation__4->SetBinError(5,0.247771);
+   ShapesPValidation__4->SetBinError(6,0.364838);
+   ShapesPValidation__4->SetBinError(7,0.049131);
+   ShapesPValidation__4->SetBinError(8,0.102139);
+   ShapesPValidation__4->SetBinError(9,0.0763989);
+   ShapesPValidation__4->SetBinError(10,0.117408);
+   ShapesPValidation__4->SetBinError(11,0.096585);
+   ShapesPValidation__4->SetBinError(12,0.16886);
+   ShapesPValidation__4->SetBinError(13,0.585391);
+   ShapesPValidation__4->SetBinError(14,0.0827398);
+   ShapesPValidation__4->SetBinError(15,0.176408);
+   ShapesPValidation__4->SetBinError(16,0.137774);
+   ShapesPValidation__4->SetBinError(17,0.000115601);
+   ShapesPValidation__4->SetBinError(18,0.303456);
+   ShapesPValidation__4->SetBinError(19,0.234381);
+   ShapesPValidation__4->SetBinError(20,0.000455511);
+   ShapesPValidation__4->SetBinError(21,0.594795);
+   ShapesPValidation__4->SetBinError(22,0.912568);
+   ShapesPValidation__4->SetBinError(25,0.28135);
+   ShapesPValidation__4->SetBinError(28,0.713263);
+   ShapesPValidation__4->SetBinError(29,0.613367);
+   ShapesPValidation__4->SetBinError(39,0.00194903);
+   ShapesPValidation__4->SetBinError(41,3.50414);
+   ShapesPValidation__4->SetEntries(11.7381);
+
+   ci = TColor::GetColor("#000099");
+   ShapesPValidation__4->SetLineColor(ci);
+   ShapesPValidation__4->GetXaxis()->SetLabelFont(42);
+   ShapesPValidation__4->GetXaxis()->SetLabelSize(0.035);
+   ShapesPValidation__4->GetXaxis()->SetTitleSize(0.035);
+   ShapesPValidation__4->GetXaxis()->SetTitleOffset(1);
+   ShapesPValidation__4->GetXaxis()->SetTitleFont(42);
+   ShapesPValidation__4->GetYaxis()->SetLabelFont(42);
+   ShapesPValidation__4->GetYaxis()->SetLabelSize(0.035);
+   ShapesPValidation__4->GetYaxis()->SetTitleSize(0.035);
+   ShapesPValidation__4->GetYaxis()->SetTitleFont(42);
+   ShapesPValidation__4->GetZaxis()->SetLabelFont(42);
+   ShapesPValidation__4->GetZaxis()->SetLabelSize(0.035);
+   ShapesPValidation__4->GetZaxis()->SetTitleSize(0.035);
+   ShapesPValidation__4->GetZaxis()->SetTitleOffset(1);
+   ShapesPValidation__4->GetZaxis()->SetTitleFont(42);
+   ShapesPValidation__4->Draw("");
+}
