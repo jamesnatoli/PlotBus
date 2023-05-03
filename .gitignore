@@ -1,5 +1,5 @@
 *~
 plots_*
 *.png
-bin/*
-histMacros/*
+bin/?*
+histMacros/.C*
