@@ -11,9 +11,9 @@ g++ runners/TestVar.cc `root-config --cflags --glibs` -o bin/testvar
 g++ runners/TestVar.cc -stdlib=libc++ -pthread -std=c++11 -m64 -I/Users/jamesnatoli/root/builddir/include -L/Users/jamesnatoli/root/builddir/lib -lGui -lCore -lImt -lRIO -lNet -lHist -lGraf -lGraf3d -lGpad -lROOTVecOps -lTree -lTreePlayer -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lThread -lMultiProc -lROOTDataFrame -stdlib=libc++ -lpthread -lm -ldl -o bin/testvar
 ```
 
-where this should provide all the requisite dependancies. You can set an environment variable
+where this should provide all the requisite dependancies. You can set an environment variable in your .bashrc or .bash_profile for convenience:
 ```
-RCOMP=`root-config --cflags --glibs` in your .bashrc or .bash_profile for convenience
+RCOMP=`root-config --cflags --glibs`
 ```
 
 Lastly, execute the binary that you've generated:
