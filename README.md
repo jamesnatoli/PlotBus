@@ -17,7 +17,7 @@ As the cuts from an analysis become more established, you can add them as variab
 
 
 | Variable            | Description      | Value |
-| ------------------- | ---------------- | ----- |
+| ------------------- | ---------------- | ----: |
 | chargereq              |      Triplet charge   | 1 |
 | deepTauVsEl | DeepTau descriminant score (>=) vs Electrons | 3 (VVLoose) |
 | deepTauVsMu | DeepTau descriminant score (>=) vs Muons | 15 (Tight) |
@@ -59,7 +59,10 @@ This is the class which will hold all of the information about the fit. Most of 
 
 ### Plotbus constructor
 The constructor takes a year as a parameter and sets some preferences to default values. These can all be changed in the runner file that you make. These defaults are listed here:
+
+
 | Variable | Description | Value |
+| -------- | ----------- | ----: |
 | bkgsToPlot | Backgrounds you want shown on the plot | QCD, DY, TT, VV |
 | processes | All processes to plot over | QCD, DY, DY10, ST, TT, ttV, VV, VVV, W+Jets |
 | procsToStack | Processes that you want stacked together | bkgsToPlot |
