@@ -7,7 +7,7 @@ To make plots first create a runner script, which can be stored in runners/. The
 The general idea is that the runners can be quickly changed for plotting preferences (binning, log/lin scale, specific processes, etc). Cuts can be added here as whole strings, but the Plotbus class expects a few types of cuts, and in this case you'll just need to set the value of the cut.
 
 ## Note on Cuts
-There are 2 main ways to provide cuts to the plot, described below. The actual plots are made with the [`TTree::Draw()`](https://root.cern.ch/doc/master/classTTree.html#a73450649dc6e54b5b94516c468523e45) function, and so cuts should be formatted according to the documentation. 
+There are 2 main ways to provide cuts to the plot, described [below](https://github.com/jamesnatoli/PlotBus#plotbus-constructor). The actual plots are made with the [`TTree::Draw()`](https://root.cern.ch/doc/master/classTTree.html#a73450649dc6e54b5b94516c468523e45) function, and so cuts should be formatted according to the documentation. 
 
 ### Manual Cut String
 To bypass the hardcoded cuts that the Plotbus expects, set the variable `plotbus->manualCutString` to a string with your cuts. This will override **all** of the default cuts in the class, using **only** this string as the argument for `TTree::Draw()`
