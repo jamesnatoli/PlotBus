@@ -90,6 +90,10 @@ The constructor takes a year as a parameter and sets some preferences to default
 | title | Title for the plot | the variable you're plotting (branch name) |
 | xtitle | Title for xaxis | the variable you're plotting (branch name) |
 
+**NB**: the notation of "bkgs (backgrounds)" and "processes" may be confusing. This is more for convenience, as referring to everything as "processes" allows us to loop over backgrounds, sigal, and data all at once without worrying about which are present. Usually we only want to display the processes which are non-negligible, as many minor backgrounds will be reduced quickly to irrelevancy.
+
+We still load and draw them for the purposes of completion (it's doesn't slow down the code very much). Additionally, in case we are estimating QCD from data, all backgrounds must be subtracted and we want this to be as accurate as possible. The yields are printed to terminal and displayed in the legend (this might be bad though...)
+
 ### Getters
 There are many functions of this class which take the values of the cuts or weights and return a string formatted for `TTree::Draw`
 

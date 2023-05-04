@@ -73,7 +73,6 @@ public:
   std::string SRcut1_scale;
   std::string SRcut2_shape;
   
-  vector<string> bkgs         = {};
   vector<string> bkgsToPlot   = {};
   vector<string> processes    = {};
   vector<string> procsToStack = {};
@@ -147,9 +146,8 @@ PlotBus::PlotBus( int yr) {
 
   // These are sort of defaults... can be overwritten
   files = {};
-  bkgs = {"QCD", "DY", "DY10", "ST", "TT", "ttV", "VV", "VVV", "W+Jets"};
+  processes = {"QCD", "DY", "DY10", "ST", "TT", "ttV", "VV", "VVV", "W+Jets"};
   bkgsToPlot = {"QCD", "DY", "TT", "VV"};
-  processes = bkgs;
   procsToStack = bkgsToPlot;
   era  = "Wto3pi_2018_cont2";
   mainpath = "/Volumes/WineCellar/KState/analysis/" + era + "/";
