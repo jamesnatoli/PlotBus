@@ -15,8 +15,10 @@ To bypass the hardcoded cuts that the Plotbus expects, set the variable `plotbus
 ### Default Cuts
 As the cuts from an analysis become more established, you can add them as variables to the Plotbus class. All of these are set to some default value by the object constructor. These cuts and their default values are described in the following table:
 
+
 | Variable            | Description      | Value |
-| chargereq              |                  | 1 |
+| ------------------- | ---------------- | ----- |
+| chargereq              |      Triplet charge   | 1 |
 | deepTauVsEl | DeepTau descriminant score (>=) vs Electrons | 3 (VVLoose) |
 | deepTauVsMu | DeepTau descriminant score (>=) vs Muons | 15 (Tight) |
 | deepTauVsJet | DeepTau descriminant score (>=) vs Jets | 31 (Medium) |
