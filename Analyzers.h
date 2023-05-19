@@ -27,7 +27,7 @@ void analyze( TH1F *sighist, float cut) {
 void printYields( std::map<std::string, std::vector<std::string>> yields, std::string text=""){
   // make this prettier?
   text = (text!="") ? (": " + text) : "";
-  std::cout << "\n*** Yields Table" << text << " ***" << std::endl;
+  std::cout << "    *** Yields Table" << text << " ***" << std::endl;
   std::cout << std::setw(15) << std::left
 	    << "Process" << ", "
 	    << std::setw(10) << std::right
@@ -81,12 +81,13 @@ void getYieldsAndEntries( map<string, TH1F*> hists, TLegend* legend,
 			  PlotBus* pb) {
   std::map<std::string, std::vector<std::string>> yields = {};
 
-  std::cout << ">>> Getting Yields and Entries..." << std::endl;
+  if (pb->verbosity > 0) std::cout << ">>> Getting Yields and Entries..." << std::endl;
   CalculateYields( hists, &yields, legend, pb);
   if (pb->verbosity >= 0)
-    printYields( yields);
+    printYields( yields, pb->currentRegion);
 }
 
+/*
 void getYieldsAndEntries( TH1F* datahist, TH1F* signalhist, map<string, TH1F*> bkghists, TLegend* legend,
 			  PlotBus* pb, std::string region) {
   stringstream integ;
@@ -112,5 +113,6 @@ void getYieldsAndEntries( TH1F* datahist, TH1F* signalhist, map<string, TH1F*> b
   if (pb->verbosity > 0)
     printYields( yields, "Region " + region);
 }
+*/
 
 #endif
