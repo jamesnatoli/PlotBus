@@ -1,4 +1,4 @@
-#include "TROOT.h"
+// #include "TROOT.h"
 #include "TFile.h"
 #include "TNtuple.h"
 #include "TCanvas.h"
@@ -74,34 +74,26 @@ int SimplePlot( PlotBus* pb) {
 
     if (proc != "QCD") {
       for (std::string reg : {"A", "B", "C", "D"}) {
-	if (pb->manualCutString == "") {
-	  if (pb->verbosity > 0)
-	    std::cout << (pb->getCutString( proc, reg)).c_str() << std::endl;
-	  chain[proc].Draw((variable + ">>proc" + proc + reg + binning).c_str(), (pb->getCutString( proc, reg)).c_str());
-	} else {
-	  std::cout << ">> Using manual cut string:" << std::endl;
-	  std::cout << pb->manualCutString << std::endl;
-	  chain[proc].Draw((variable + ">>proc" + proc + reg + binning).c_str(), pb->manualCutString.c_str());
-	}
+	if (pb->verbosity > 0)
+	  std::cout << (pb->getCutString( proc, reg)).c_str() << std::endl;
+	chain[proc].Draw((variable + ">>proc" + proc + reg + binning).c_str(), (pb->getCutString( proc, reg)).c_str());
       }
     }
   }
   
   std::cout << "\n>>> Getting histograms" << std::endl;
-  map<string, TH1F*> hists;
-  if (doQCD)
-    hists["QCD"] = doQCDestimation( pb, binning);
+  std::map<std::string, TH1F*> hists;
   for (string proc : pb->processes) {
     if (proc != "QCD") {
       if (pb->verbosity > 0 )
 	std::cout << ">>> Getting: " << proc << std::endl;
-      hists[proc] = (TH1F*)gDirectory->Get(("proc"+proc+"A").c_str());
+      if (proc != "data" || pb->plotDataSR)
+	hists[proc] = (TH1F*)gDirectory->Get(("proc"+proc+"A").c_str());
     }
   }
-
+  
   // Add DY10 to DY and then get rid of it (can do this for other bkgs too
   // if ( std::find( pb->procsToStack.begin(), pb->procsToStack.end(), hist.first) != pb->procsToStack.end()) 
-  
   for (auto const& bkgpart : bkgsParts) {
     if ( (std::find( pb->processes.begin(), pb->processes.end(), bkgpart.first)  != pb->processes.end()) &&
 	 (std::find( pb->processes.begin(), pb->processes.end(), bkgpart.second) != pb->processes.end())) {
@@ -115,7 +107,12 @@ int SimplePlot( PlotBus* pb) {
   }
 
   std::cout << ">>> Making canvas" << std::endl;
-  makePlot( hists, pb);
+  if (doQCD) {
+    hists["QCD"] = doQCDestimation( pb, binning);
+    makeRegionPlot( hists, pb, "A");
+  } else {
+    makePlot( hists, pb);
+  }
   
   return 0;
 }

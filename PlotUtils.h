@@ -9,6 +9,28 @@
 #include "Analyzers.h"
 #include "PlotBus.cc"
 
+void makeRatioPlot( TH1F* histRatio, PlotBus* pb) {
+  TCanvas *can = new TCanvas("Normalization ratio", "Normalization ratio", 600, 600);
+  can->SetLeftMargin(0.14); // 0.1 -> 0.14
+  can->SetRightMargin(0.06); // 0.1 -> 0.06
+  can->SetTickx();
+  can->SetTicky();
+  can->cd();
+
+  // gStyle->SetOptFit( 1111);
+  histRatio->SetStats(true);
+  histRatio->SetMarkerColor(1);
+  histRatio->GetXaxis()->SetTitle("Inv. W boson mass [GeV]");
+  // histRatio->GetXaxis()->SetRangeUser( lowfitbin, highfitbin);
+  histRatio->GetYaxis()->SetTitle("Region C over D");
+  histRatio->GetYaxis()->SetRangeUser( -0.5, 1);
+  // histRatio->GetYaxis()->SetRangeUser( 0.0, 0.5);
+  histRatio->SetTitle("Normalization ratio");
+  histRatio->Draw("E1");
+  
+  can->SaveAs((pb->filepath + "/QCD_normailzation_" + pb->filename + "_" + pb->getyear()  + ".png").c_str());
+};
+
 // Figure out which element is the tallest and draw it, such that the scaling is correct
 void drawTallest( TList* thingsToDraw, PlotBus* pb) {
   // TODO: deal with logy issue...
@@ -49,7 +71,7 @@ void drawTallest( TList* thingsToDraw, PlotBus* pb) {
 // the std::map hists should look like { "process", histogram pointer}
 void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
   std::map<std::string, std::vector<std::string>> yields;
-  TCanvas *can = new TCanvas( pb->getfilename(), pb->getfilename(), 600, 600);
+  TCanvas *can = new TCanvas( (pb->getfilename()+pb->getRegion()).c_str(), pb->getfilename(), 600, 600);
   TList *thingsToDraw = new TList();
   can->SetLeftMargin(0.14); // 0.1 -> 0.14
   can->SetRightMargin(0.06); // 0.1 -> 0.06
@@ -63,7 +85,7 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
   // Backgrounds
   for (auto const &hist : hists){
     if (pb->fillHists)
-      hist.second->SetFillColor(colors[hist.first]);
+      hist.second->SetFillColor( getColors(hist.first));
     else
       hist.second->SetFillColor(0);
     
@@ -85,13 +107,13 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
 	thingsToDraw->Add( hist.second);
       }
     } else {
-      hist.second->SetLineColor(colors[hist.first]);
+      hist.second->SetLineColor( getColors(hist.first));
       if (pb->verbosity > 0)
 	std::cout << ">>> Plotting: " << hist.first << std::endl;
       thingsToDraw->Add( hist.second);
     }
   } // for (auto hist& : ...
-  
+
   if (pb->stack)
     thingsToDraw->Add( stack);
   
@@ -106,7 +128,7 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
   }
   
   // Data (not in SR (unless I say so))
-  if (pb->plotData) {
+  if (pb->getRegion() == "A" && pb->plotDataSR) {
     std::cout << ">>> Plotting Data..." << std::endl;
     hists["data"]->SetMarkerStyle(8);
     hists["data"]->SetMarkerSize(0.8);
@@ -129,9 +151,9 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
   legend->Draw();
 
   if (pb->logy) 
-    can->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+"_"+pb->getyear()+"_logy.png").c_str());
+    can->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegion()+"_"+pb->getyear()+"_logy.png").c_str());
   else
-    can->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+"_"+pb->getyear()+".png").c_str());
+    can->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegion()+"_"+pb->getyear()+".png").c_str());
 
   if (pb->saveHists) {
     std::cout << ">>> Saving histograms as .C files in histMacros/" << std::endl;
@@ -141,6 +163,14 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
   }
 }
 
+// Is this smart?
+void makeRegionPlot( std::map<std::string, TH1F*> hists, PlotBus* pb, std::string region) {
+  pb->currentRegion = region;
+  pb->title = pb->RegionTitles[region];
+  makePlot( hists, pb);
+}
+
+/*
 void makePlot(TH1F* signalhist, TH1F* datahist, std::map<std::string, TH1F*> bkghists, std::vector<std::string> bkgs, PlotBus* pb) {
   std::map<std::string, std::vector<std::string>> yields;
   TCanvas *can = new TCanvas( pb->getfilename(), pb->getfilename(), 600, 600);
@@ -320,5 +350,5 @@ void makeRegionPlot( string region, TH1F* datahist, TH1F* signalhist, map<string
   legend->Draw();
   can->SaveAs(( pb->filepath + "/QCD_region_"+region+"_"+pb->filename+"_"+pb->getyear()+".png").c_str());
 }
-
+*/
 #endif
