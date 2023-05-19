@@ -25,4 +25,12 @@ std::map<std::string, int> colors{
 				    {"ST_AntiTopDown", kGreen},
 				      {"", kGray}
 };
+
+// strip the region if necessary
+int getColors( std::string proc) {
+  if ( proc.find("_") != std::string::npos)
+    return colors[proc];
+  else
+    return colors[ proc.substr(0, proc.find("_"))];
+}
 #endif // COLORS_H
