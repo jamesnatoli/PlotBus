@@ -167,7 +167,8 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
 // Is this smart?
 void makeRegionPlot( std::map<std::string, TH1F*> hists, PlotBus* pb, std::string region) {
   pb->currentRegion = region;
-  pb->title = pb->RegionTitles[region];
+  if (pb->qcdInfo)
+    pb->title = pb->RegionTitles[region];
   makePlot( hists, pb);
 }
 
