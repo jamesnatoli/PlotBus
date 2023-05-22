@@ -129,12 +129,12 @@ public:
 
   std::string getRegionCut( std::string);
   
-  std::string getRegionCutsA() { return "(" +  SRcut1_scale + ") && (" +  SRcut2_shape + ")"; };
-  std::string getRegionCutsB() { return "!(" + SRcut1_scale + ") && (" +  SRcut2_shape + ")"; };
-  std::string getRegionCutsC() { return "(" +  SRcut1_scale + ") && !(" + SRcut2_shape + ")"; };
-  std::string getRegionCutsD() { return "!(" + SRcut1_scale + ") && !(" + SRcut2_shape + ")"; };
-  std::string getRegion()      { return "_Reg" + currentRegion; };
-  std::string getRegionTitle() { return  RegionTitles[currentRegion]; };
+  std::string getRegionCutsA()  { return "(" +  SRcut1_scale + ") && (" +  SRcut2_shape + ")"; };
+  std::string getRegionCutsB()  { return "!(" + SRcut1_scale + ") && (" +  SRcut2_shape + ")"; };
+  std::string getRegionCutsC()  { return "(" +  SRcut1_scale + ") && !(" + SRcut2_shape + ")"; };
+  std::string getRegionCutsD()  { return "!(" + SRcut1_scale + ") && !(" + SRcut2_shape + ")"; };
+  std::string getRegionString() { return ("_Reg" + currentRegion).c_str(); };
+  std::string getRegionTitle()  { return  RegionTitles[currentRegion]; };
   
   std::string getRegionCutData( std::string region);
   std::string getRegionCutSignal( std::string region);

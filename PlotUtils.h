@@ -71,7 +71,7 @@ void drawTallest( TList* thingsToDraw, PlotBus* pb) {
 // the std::map hists should look like { "process", histogram pointer}
 void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
   std::map<std::string, std::vector<std::string>> yields;
-  TCanvas *can = new TCanvas( (pb->getfilename()+pb->getRegion()).c_str(), pb->getfilename(), 600, 600);
+  TCanvas *can = new TCanvas( (pb->getfilename()+pb->getRegionString()).c_str(), pb->getfilename(), 600, 600);
   TList *thingsToDraw = new TList();
   can->SetLeftMargin(0.14); // 0.1 -> 0.14
   can->SetRightMargin(0.06); // 0.1 -> 0.06
@@ -126,15 +126,6 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
     for (auto const &hist : hists) 
       hist.second->Draw("HIST SAME");
   }
-  
-  // Data (not in SR (unless I say so))
-  if (pb->getRegion() == "A" && pb->plotDataSR) {
-    std::cout << ">>> Plotting Data..." << std::endl;
-    hists["data"]->SetMarkerStyle(8);
-    hists["data"]->SetMarkerSize(0.8);
-    hists["data"]->SetStats(false);
-    hists["data"]->Draw("E1SAME");
-  }
 
   // Signal
   if (pb->plotSignal) {
@@ -147,13 +138,23 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
     hists["signal"]->SetStats(false);
     hists["signal"]->Draw("HIST SAME");
   }
+
+  // Data (not in SR (unless I say so))
+  // Put this last so error bars are visible
+  if (pb->currentRegion != "A" || pb->plotDataSR) {
+    std::cout << ">>> Plotting Data..." << std::endl;
+    hists["data"]->SetMarkerStyle(8);
+    hists["data"]->SetMarkerSize(0.8);
+    hists["data"]->SetStats(false);
+    hists["data"]->Draw("E1SAME");
+  }
   
   legend->Draw();
 
   if (pb->logy) 
-    can->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegion()+"_"+pb->getyear()+"_logy.png").c_str());
+    can->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegionString()+"_"+pb->getyear()+"_logy.png").c_str());
   else
-    can->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegion()+"_"+pb->getyear()+".png").c_str());
+    can->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegionString()+"_"+pb->getyear()+".png").c_str());
 
   if (pb->saveHists) {
     std::cout << ">>> Saving histograms as .C files in histMacros/" << std::endl;
