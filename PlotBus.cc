@@ -81,7 +81,10 @@ public:
   vector<string> processes      = {};
   vector<string> procsToStack   = {};
   vector<float>  analyzeCuts    = {};
-  map<string, string> bkgsParts = {};
+
+  // Samples to Merge
+  std::map< std::string, std::string> bkgsParts = {};
+  std::map< std::string, std::vector<std::string>> samplesToMerge = {};
 
   // Chains
   TChain* signalchain;
@@ -150,6 +153,7 @@ public:
 
   void MergeFiles();
   void FillFiles( int year);
+  void MergeSamples( std::map<std::string, TH1F*> *phists);
 };
 
 // Constructor takes year as parameter
@@ -159,8 +163,20 @@ PlotBus::PlotBus( int yr) {
   files = {};
   processes = {"QCD", "DY", "DY10", "ST", "TT", "ttV", "VV", "VVV", "W+Jets"};
   bkgsToPlot = {"QCD", "DY", "TT", "VV"};
-  bkgsParts  = { {"DY10", "DY"} };
+  
+  samplesToMerge = {
+		    {"DY",
+		     {"DY10"}
+		    },
+		    {"Top",
+		     {"ST", "TT", "ttV"}
+		    },
+		    {"MultiBoson",
+		     {"VV", "VVV"}
+		    }
+  };
   procsToStack = bkgsToPlot;
+  bkgsParts = {{"DY10", "DY"}};
   era  = "Wto3pi_2018_cont2";
   mainpath = "/Volumes/WineCellar/KState/analysis/" + era + "/";
   year = yr;
@@ -550,6 +566,43 @@ void PlotBus::MergeFiles() {
   }
 }
 
+// Merge samples, but smartly :)
+void PlotBus::MergeSamples( std::map<std::string, TH1F*> *phists) {
+  // dereference this once here...
+  std::map<std::string, TH1F*> &hists = *phists;
+
+  // Do Things
+  for (auto const& merger : samplesToMerge) {
+    // Merge samples to create a *NEW* process
+    if (std::find( processes.begin(), processes.end(), merger.first) == processes.end()) {
+      if (verbosity > 0)
+	std::cout << ">>> Creating new process: " << merger.first << std::endl;
+      // processes.push_back( merger.first);
+      if (std::find( processes.begin(), processes.end(), merger.second[0]) != processes.end()) {
+	hists[merger.first] = (TH1F*)hists[merger.second[0]]->Clone();
+	hists[merger.first]->Reset();
+      } else {
+	std::cout << ">>> !!!MERGE ERROR: Sample " << merger.second[0] << " did not exist... could not merge" << std::endl;
+      }
+    }
+
+    // Now we've ensured that there is something to add to 
+    for (auto const& sample : merger.second) {
+      if (std::find( processes.begin(), processes.end(), sample) != processes.end()) {
+	if (verbosity > 0) {
+	  std::cout << ">>> Adding " << sample << " to " << merger.first << std::endl;
+	  std::cout << ">>> Erasing: " << sample << std::endl;
+	}
+	hists[merger.first]->Add( hists[sample], 1);
+	hists.erase( sample);
+	// processes.erase( std::find( processes.begin(), processes.end(), sample));
+      } else {
+	std::cout << ">>> !!!MERGE ERROR: Sample " << merger.second[0] << " did not exist... could not merge" << std::endl;
+      }
+    } // end sample loop
+  } // end merger loop
+}
+ 
 // for the extra methods
 #include "FillFiles.cc"
 

@@ -22,7 +22,7 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
   for (string reg : {"A", "B", "C", "D"}){
     hists = {}; // reset for every region
     pb->currentRegion = reg;
-    if (pb->verbosity > 0) std::cout << "\n>>> *** REGION: " << reg << " ***" << std::endl;
+    if (pb->verbosity >= 0) std::cout << "\n>>> *** REGION: " << reg << " ***" << std::endl;
     if (!(TH1F*)gDirectory->Get(("procdata"+reg).c_str())) { // data is *usually* not drawn (SR)
       (pb->datachain).Draw(( pb->variable + ">>procdata" + reg + binning).c_str(), (pb->getCutString( "data", reg)).c_str());
       datahists[reg]   = (TH1F*)gDirectory->Get(("procdata"+reg).c_str());
@@ -32,6 +32,7 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
       hists["data"] = datahists[reg];
     }
     for (std::string proc : processes) {
+      // what's going on here??
       prochists[proc+"_"+reg] = (TH1F*)gDirectory->Get(("proc"+proc+reg).c_str());
       hists[proc] = prochists[proc+"_"+reg];
     }
@@ -47,7 +48,8 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
       }
     }
     hists["QCD"] = QCDhists[reg];
-    if (reg != "A")
+    pb->MergeSamples( &hists);
+    if (reg != "A" && pb->qcdInfo)
       makeRegionPlot( hists, pb, reg);
   } // for (string reg : abcd)
     

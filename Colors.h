@@ -23,7 +23,9 @@ std::map<std::string, int> colors{
 				{"ST_AntiTop", kBlack},
 				  {"ST_AntiTopUp", kBlue},
 				    {"ST_AntiTopDown", kGreen},
-				      {"", kGray}
+				      {"MultiBoson", kOrange},
+					{"Top", kGreen},
+					  {"", kGray}
 };
 
 // strip the region if necessary
