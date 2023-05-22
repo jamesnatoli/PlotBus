@@ -113,4 +113,5 @@ This sets up the the object member `files` (`std::map<std::string, std::vector<s
 
 ## Colors.h
 
-## QCDestimation.cc
+## doQCDestimation.cc
+This is where the QCD estimation is done, it's kept in a seperate file for simplicity. This employs the ABCD method
