@@ -39,7 +39,6 @@ int SimplePlot( PlotBus* pb) {
   pb->FillFiles( pb->year);
   pb->MergeFiles();
   map<string, vector<string>> files = pb->files;
-  map<string, string> bkgsParts{{"DY10", "DY"}}; 
 
   std::cout << ">>> Making chain" << std::endl;
   bool doQCD = false;
@@ -93,16 +92,21 @@ int SimplePlot( PlotBus* pb) {
   }
   
   // Add DY10 to DY and then get rid of it (can do this for other bkgs too
-  // if ( std::find( pb->procsToStack.begin(), pb->procsToStack.end(), hist.first) != pb->procsToStack.end()) 
-  for (auto const& bkgpart : bkgsParts) {
+  // if ( std::find( pb->procsToStack.begin(), pb->procsToStack.end(), hist.first) != pb->procsToStack.end())
+  for (auto const& bkgpart : pb->bkgsParts) {
     if ( (std::find( pb->processes.begin(), pb->processes.end(), bkgpart.first)  != pb->processes.end()) &&
 	 (std::find( pb->processes.begin(), pb->processes.end(), bkgpart.second) != pb->processes.end())) {
-      if (pb->verbosity > 0)
+      if (pb->verbosity >= 0)
 	std::cout << ">>> Adding " << bkgpart.first << " to " << bkgpart.second << std::endl;
       hists[bkgpart.second]->Add( hists[bkgpart.first], 1);
-      if (pb->verbosity > 0)
+      if (pb->verbosity >= 0)
 	std::cout << ">>> Erasing: " << bkgpart.first << std::endl;      
       hists.erase( bkgpart.first);
+      pb->processes.erase( std::find( pb->processes.begin(), pb->processes.end(), bkgpart.first));
+    } else {
+      std::cout << "Nothing merged... " <<
+	bkgpart.first  << " or " <<
+	bkgpart.second << " not present" << std::endl;
     }
   }
 

@@ -77,10 +77,11 @@ public:
   std::string SRcut1_scale;
   std::string SRcut2_shape;
   
-  vector<string> bkgsToPlot   = {};
-  vector<string> processes    = {};
-  vector<string> procsToStack = {};
-  vector<float>  analyzeCuts  = {};
+  vector<string> bkgsToPlot     = {};
+  vector<string> processes      = {};
+  vector<string> procsToStack   = {};
+  vector<float>  analyzeCuts    = {};
+  map<string, string> bkgsParts = {};
 
   // Chains
   TChain* signalchain;
@@ -158,6 +159,7 @@ PlotBus::PlotBus( int yr) {
   files = {};
   processes = {"QCD", "DY", "DY10", "ST", "TT", "ttV", "VV", "VVV", "W+Jets"};
   bkgsToPlot = {"QCD", "DY", "TT", "VV"};
+  bkgsParts  = { {"DY10", "DY"} };
   procsToStack = bkgsToPlot;
   era  = "Wto3pi_2018_cont2";
   mainpath = "/Volumes/WineCellar/KState/analysis/" + era + "/";
