@@ -84,7 +84,7 @@ int SimplePlot( PlotBus* pb) {
   std::map<std::string, TH1F*> hists;
   for (string proc : pb->processes) {
     if (proc != "QCD") {
-      if (pb->verbosity > 0 )
+      if (pb->verbosity > 1)
 	std::cout << ">>> Getting: " << proc << std::endl;
       if (proc != "data" || pb->plotDataSR)
 	hists[proc] = (TH1F*)gDirectory->Get(("proc"+proc+"A").c_str());

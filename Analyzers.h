@@ -53,7 +53,7 @@ void CalculateYields( std::map<std::string, TH1F*> hists, std::map<std::string, 
   // Loop over only the backgrounds that we want to plot
   for (auto const& hist : hists) {
     if (pb->overflow) {
-      integ << fixed << setprecision(2) << hist.second->Integral( 0, hist.second->GetNbinsX()+1);
+      integ << fixed << setprecision(6) << hist.second->Integral( 0, hist.second->GetNbinsX()+1);
       std::vector<std::string> vec{ integ.str(), to_string( (int)hist.second->GetEntries() +
 							    (int)hist.second->GetBinContent( hist.second->GetNbinsX()+1))};
       (*yields)[hist.first] = vec;
@@ -81,7 +81,7 @@ void getYieldsAndEntries( map<string, TH1F*> hists, TLegend* legend,
 			  PlotBus* pb) {
   std::map<std::string, std::vector<std::string>> yields = {};
 
-  if (pb->verbosity > 0) std::cout << ">>> Getting Yields and Entries..." << std::endl;
+  if (pb->verbosity > 1) std::cout << ">>> Getting Yields and Entries..." << std::endl;
   CalculateYields( hists, &yields, legend, pb);
   if (pb->verbosity >= 0)
     printYields( yields, pb->currentRegion);

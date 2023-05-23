@@ -34,6 +34,7 @@ void makeRatioPlot( TH1F* histRatio, PlotBus* pb) {
 // Figure out which element is the tallest and draw it, such that the scaling is correct
 void drawTallest( TList* thingsToDraw, PlotBus* pb) {
   // TODO: deal with logy issue...
+  float scaleAxis = 1.25;
   TObject* tallest;
   float maxheight = -1;
   for (const auto&& obj : *thingsToDraw) {
@@ -50,16 +51,26 @@ void drawTallest( TList* thingsToDraw, PlotBus* pb) {
     }
   }
 
-  if ( std::string(tallest->GetName()).find("data") != std::string::npos ) { 
+  if ( std::string(tallest->GetName()).find("data") != std::string::npos ) {
     tallest->Draw("E1");
-  }
-  else
+  } else {
+    if (tallest->IsA() == TClass::GetClass("THStack")) {
+      if (pb->verbosity > 1)
+	std::cout << ">>> Setting Maximum to " << (int)(maxheight*scaleAxis) << std::endl;
+      // ROOT approved way, ugh
+      // https://root-forum.cern.ch/t/thstack-what-is-the-correct-way-to-set-the-y-axis-limits/41851/9
+      ((THStack*)tallest)->SetMaximum( (int)(maxheight*scaleAxis)); 
+    }
     tallest->Draw("HIST");
+  }
   
   if (tallest->IsA() == TClass::GetClass("TH1F")) {
     ((TH1F*)tallest)->SetTitle( pb->gettitle());
     ((TH1F*)tallest)->GetXaxis()->SetTitle( pb->getxtitle());
     ((TH1F*)tallest)->GetYaxis()->SetTitle("Events");
+    if (pb->verbosity > 1)
+      std::cout << ">>> Setting Maximum to " << (int)(maxheight*scaleAxis) << std::endl;
+    ((TH1F*)tallest)->GetYaxis()->SetRangeUser(0, (int)(maxheight*scaleAxis)); // account for error bars
   } else if (tallest->IsA() == TClass::GetClass("THStack")) {
     ((THStack*)tallest)->SetTitle( pb->gettitle());
     ((THStack*)tallest)->GetXaxis()->SetTitle( pb->getxtitle());
@@ -98,7 +109,7 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
     if (pb->stack) {
       if ( std::find( pb->procsToStack.begin(), pb->procsToStack.end(), hist.first) != pb->procsToStack.end()) {
 	hist.second->SetLineColor( kBlack);
-	if (pb->verbosity > 0)
+	if (pb->verbosity > 1)
 	  std::cout << ">>> Stacking: " << hist.first << std::endl;
 	stack->Add( hist.second);
       } else if ((pb->plotData) && (hist.first == "data")) {
@@ -108,7 +119,7 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
       }
     } else {
       hist.second->SetLineColor( getColors(hist.first));
-      if (pb->verbosity > 0)
+      if (pb->verbosity > 1)
 	std::cout << ">>> Plotting: " << hist.first << std::endl;
       thingsToDraw->Add( hist.second);
     }

@@ -16,7 +16,7 @@ public:
   
   bool logy;
   bool logandlin;
-  bool mergeOthers;
+  bool mergeSamples;
   bool saveHists;
   bool plotData;
   bool plotDataSR;
@@ -153,7 +153,7 @@ public:
 
   void MergeFiles();
   void FillFiles( int year);
-  void MergeSamples( std::map<std::string, TH1F*> *phists);
+  int MergeSamples( std::map<std::string, TH1F*> *phists);
 };
 
 // Constructor takes year as parameter
@@ -163,7 +163,8 @@ PlotBus::PlotBus( int yr) {
   files = {};
   processes = {"QCD", "DY", "DY10", "ST", "TT", "ttV", "VV", "VVV", "W+Jets"};
   bkgsToPlot = {"QCD", "DY", "TT", "VV"};
-  
+
+  mergeSamples   = true;
   samplesToMerge = {
 		    {"DY",
 		     {"DY10"}
@@ -194,7 +195,6 @@ PlotBus::PlotBus( int yr) {
   // Default Options
   logy        = false;
   logandlin   = false;
-  mergeOthers = false;
   saveHists   = false;
   plotData    = true;
   plotDataSR  = false;
@@ -229,7 +229,7 @@ PlotBus::PlotBus( int yr) {
   SRcut1_scale = "(PionTriplet_pion3_iso < 0.1)";
   SRcut2_shape = "(PionTriplet_LowestDeepTauVsJet >= 31)";
     
-  SignalScale = 5;
+  SignalScale = 6;
   eventCuts   = "Trigger_ditau && !LeptonVeto";
   tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && PionTriplet_TriggerMatched";
   tripletCuts+= " && (min( min( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) > 0.5)";
@@ -292,20 +292,28 @@ std::string PlotBus::getWptString() {
 
 std::string PlotBus::getDxyString() {
   if (Dxy == 0)
-    return ("(abs(PionTriplet_pion1_dxy) > -1) && (abs(PionTriplet_pion2_dxy) > -1) && (abs(PionTriplet_pion3_dxy) > -1)");
+    return ("(max(max(abs(PionTriplet_pion1_dxy), abs(PionTriplet_pion2_dxy)), abs(PionTriplet_pion3_dxy)) > -1)");
+    // return ("(abs(PionTriplet_pion1_dxy) > -1) && (abs(PionTriplet_pion2_dxy) > -1) && (abs(PionTriplet_pion3_dxy) > -1)");
   else
-    return ("(abs(PionTriplet_pion1_dxy) < " + to_string(Dxy) + ") && " +
-	    "(abs(PionTriplet_pion2_dxy) < " + to_string(Dxy) + ") && " +
-	    "(abs(PionTriplet_pion3_dxy) < " + to_string(Dxy) + ")");
+    return ("(max(max(abs(PionTriplet_pion1_dxy), abs(PionTriplet_pion2_dxy)), abs(PionTriplet_pion3_dxy)) < " + to_string(Dxy) + ")");
+    /*
+      return ("(abs(PionTriplet_pion1_dxy) < " + to_string(Dxy) + ") && " +
+      "(abs(PionTriplet_pion2_dxy) < " + to_string(Dxy) + ") && " +
+      "(abs(PionTriplet_pion3_dxy) < " + to_string(Dxy) + ")");
+    */
 }
 
 std::string PlotBus::getDzString() {
   if (Dz == 0)
-    return ("(abs(PionTriplet_pion1_dz) > -1) && (abs(PionTriplet_pion2_dz) > -1) && (abs(PionTriplet_pion3_dz) > -1)");
+    return ("(max(max(abs(PionTriplet_pion1_dz), abs(PionTriplet_pion2_dz)), abs(PionTriplet_pion3_dz)) > -1)");
+  // return ("(abs(PionTriplet_pion1_dz) > -1) && (abs(PionTriplet_pion2_dz) > -1) && (abs(PionTriplet_pion3_dz) > -1)");
   else
+    return ("(max(max(abs(PionTriplet_pion1_dz), abs(PionTriplet_pion2_dz)), abs(PionTriplet_pion3_dz)) < " + to_string(Dz) + ")");
+  /*
     return ("(abs(PionTriplet_pion1_dz) < " + to_string(Dz) + ") && " +
-	    "(abs(PionTriplet_pion2_dz) < " + to_string(Dz) + ") && " +
-	    "(abs(PionTriplet_pion3_dz) < " + to_string(Dz) + ")");
+    "(abs(PionTriplet_pion2_dz) < " + to_string(Dz) + ") && " +
+    "(abs(PionTriplet_pion3_dz) < " + to_string(Dz) + ")");
+  */
 }
 
 std::string PlotBus::getBjetVetoString() {
@@ -349,6 +357,7 @@ std::string PlotBus::getSelectionCut() {
   return ("(PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, " +
 	  PlotBus::getChargeReqString() + " && " +
 	  PlotBus::getTripletCuts() + " && " +
+	  PlotBus::getWptString() + " && " + 
 	  PlotBus::getDeepTauString() + " && " +
 	  PlotBus::getIsoTrackIsoString() + " && " +
 	  PlotBus::getDxyString() + " && " +
@@ -362,6 +371,7 @@ std::string PlotBus::getSelectionCut( std::string extras) {
     return ("(PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, " +
 	    PlotBus::getChargeReqString() + " && " +
 	    PlotBus::getTripletCuts() + " && " +
+	    PlotBus::getWptString() + " && " + 
 	    PlotBus::getDeepTauString() + " && " +
 	    PlotBus::getIsoTrackIsoString() + " && " +
 	    PlotBus::getDxyString() + " && " + 
@@ -372,6 +382,7 @@ std::string PlotBus::getSelectionCut( std::string extras) {
     return ("(PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, " +
 	    PlotBus::getChargeReqString() + " && " +
 	    PlotBus::getTripletCuts() + " && " +
+	    PlotBus::getWptString() + " && " + 
 	    PlotBus::getDeepTauString() + " && " +
 	    PlotBus::getIsoTrackIsoString() + " && " +
 	    PlotBus::getDxyString() + " && " + 
@@ -384,8 +395,9 @@ std::string PlotBus::getSelectionCut( std::string extras) {
 std::string PlotBus::getStdCutString() {
   return (PlotBus::getSelectionCut() + " && " + 
 	  PlotBus::getEventCuts() + " && " +
-	  PlotBus::getTripletCuts() + " && " +
 	  PlotBus::getChargeReqString() + " && " +
+	  PlotBus::getTripletCuts() + " && " +
+	  PlotBus::getWptString() + " && " + 
 	  PlotBus::getDeepTauString() + " && " +
 	  PlotBus::getIsoTrackIsoString() + " && " +
 	  PlotBus::getDxyString() + " && " + 
@@ -397,8 +409,9 @@ std::string PlotBus::getStdCutString() {
 std::string PlotBus::getStdCutString( std::string extras) {
   return (PlotBus::getSelectionCut( extras) + " && " + 
 	  PlotBus::getEventCuts() + " && " +
-	  PlotBus::getTripletCuts() + " && " +
 	  PlotBus::getChargeReqString() + " && " +
+	  PlotBus::getTripletCuts() + " && " +
+	  PlotBus::getWptString() + " && " + 
 	  PlotBus::getDeepTauString() + " && " +
 	  PlotBus::getIsoTrackIsoString() + " && " +
 	  PlotBus::getDxyString() + " && " + 
@@ -439,6 +452,7 @@ std::string PlotBus::getCutString( std::string process, std::string region="") {
     }
   } else { // Regions
     if (manualCutString != "") {
+      std::cout << ">>> USING MANUAL CUT STRING" << std::endl;
       if ( process == "signal")
 	return ("(" + PlotBus::getSignalWeight() + ") * (" + manualCutString + ")");
       else if ( process == "data")
@@ -567,7 +581,9 @@ void PlotBus::MergeFiles() {
 }
 
 // Merge samples, but smartly :)
-void PlotBus::MergeSamples( std::map<std::string, TH1F*> *phists) {
+int PlotBus::MergeSamples( std::map<std::string, TH1F*> *phists) {
+  if (!mergeSamples)
+    return 1;
   // dereference this once here...
   std::map<std::string, TH1F*> &hists = *phists;
 
@@ -601,6 +617,7 @@ void PlotBus::MergeSamples( std::map<std::string, TH1F*> *phists) {
       }
     } // end sample loop
   } // end merger loop
+  return 0;
 }
  
 // for the extra methods
