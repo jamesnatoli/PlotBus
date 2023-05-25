@@ -44,7 +44,7 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
     for(string proc : processes){
       if ((proc != "signal") && (proc != "QCD") && (proc != "data")) {
 	if (pb->verbosity > 1)
-	  std::cout << "Subbing: " << proc << std::endl;
+	  std::cout << "Subtracting: " << proc << std::endl;
 	QCDhists[reg]->Add(prochists[proc+"_"+reg], -1);
       }
     }
@@ -90,8 +90,9 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
   if (pb->verbosity > 1)
     std::cout << ">>> Getting obtained QCD background" << std::endl;
   prochists["QCD"] = (TH1F*)QCDhists["B"]->Clone("QCD");
-  
-  for (int ibin = 0; ibin < prochists["QCD"]->GetNbinsX(); ++ibin)
+
+  // Don't forget about the last bin
+  for (int ibin = 0; ibin <= prochists["QCD"]->GetNbinsX()+1; ++ibin)
     prochists["QCD"]->SetBinContent( ibin, prochists["QCD"]->GetBinContent(ibin) * histRatio->GetBinContent(ibin));
   
   return prochists["QCD"];
