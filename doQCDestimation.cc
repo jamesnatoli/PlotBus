@@ -22,7 +22,7 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
   for (string reg : {"A", "B", "C", "D"}){
     hists = {}; // reset for every region
     pb->currentRegion = reg;
-    if (pb->verbosity > 0)
+    if (pb->verbosity > 1)
       std::cout << "\n>>> *** REGION: " << reg << " ***" << std::endl;
     if (!(TH1F*)gDirectory->Get(("procdata"+reg).c_str())) { // data is *usually* not drawn (SR)
       (pb->datachain).Draw(( pb->variable + ">>procdata" + reg + binning).c_str(), (pb->getCutString( "data", reg)).c_str());
@@ -43,7 +43,7 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
     // Substract out processes (not qcd or signal)
     for(string proc : processes){
       if ((proc != "signal") && (proc != "QCD") && (proc != "data")) {
-	if (pb->verbosity > 0)
+	if (pb->verbosity > 1)
 	  std::cout << "Subbing: " << proc << std::endl;
 	QCDhists[reg]->Add(prochists[proc+"_"+reg], -1);
       }
@@ -63,7 +63,7 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
     std::cout << "Data Integral in D: " << datahists["D"]->Integral(0, datahists["D"]->GetNbinsX()+1) << std::endl;
   }
 
-  if (pb->verbosity > 0)
+  if (pb->verbosity > 1)
     std::cout << ">>> Getting extrapolation" << std::endl;
   TH1F* histRatio = (TH1F*)QCDhists["C"]->Clone("Normalization ratio");
   histRatio->Divide(QCDhists["D"]);
@@ -80,14 +80,14 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
   }
 
   // Some output stuff...
-  if (pb->verbosity > 0) histRatio->SaveAs("histRatio.C");
+  if (pb->verbosity > 1) histRatio->SaveAs("histRatio.C");
   if (pb->qcdInfo) makeRatioPlot( histRatio, pb);
 
   // ******************
   // *** ESTIMATION ***
   // ******************
 
-  if (pb->verbosity > 0)
+  if (pb->verbosity > 1)
     std::cout << ">>> Getting obtained QCD background" << std::endl;
   prochists["QCD"] = (TH1F*)QCDhists["B"]->Clone("QCD");
   
