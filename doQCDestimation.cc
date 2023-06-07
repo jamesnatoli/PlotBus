@@ -31,20 +31,19 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
       datahists[reg] = (TH1F*)gDirectory->Get(("procdata"+reg).c_str());
       hists["data"] = datahists[reg];
     }
-    for (std::string proc : processes)
-      hists[proc] = = (TH1F*)gDirectory->Get(("proc"+proc+reg).c_str());
-    
+
     QCDhists[reg]  = (TH1F*)datahists[reg]->Clone(("QCD_"+reg).c_str());
     QCDhists[reg]->Sumw2();
     
-    // Substract out processes (not qcd or signal)
-    for(string proc : processes){
-      if ((proc != "signal") && (proc != "QCD") && (proc != "data")) {
-	if (pb->verbosity > 1)
-	  std::cout << "Subtracting: " << proc << std::endl;
-	QCDhists[reg]->Add(hists[proc], -1);
+    for (std::string proc : processes) {
+      if (proc != "QCD") {
+	hists[proc] = (TH1F*)gDirectory->Get(("proc"+proc+reg).c_str());
+	// subtract out processes (not signal or data)
+	if ((proc != "signal") && (proc != "data"))
+	  QCDhists[reg]->Add(hists[proc], -1);
       }
     }
+    
     hists["QCD"] = QCDhists[reg];
     pb->MergeSamples( &hists);
     if (reg != "A" && pb->qcdInfo)
@@ -84,12 +83,32 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
   // *** ESTIMATION ***
   // ******************
 
-  if (pb->verbosity > -1)
+  if (pb->verbosity > 1)
     std::cout << ">>> Getting obtained QCD background" << std::endl;
 
   // Don't forget about the last bin
   for (int ibin = 0; ibin <= QCDhists["B"]->GetNbinsX()+1; ++ibin)
     QCDhists["A"]->SetBinContent( ibin, QCDhists["B"]->GetBinContent(ibin) * histRatio->GetBinContent(ibin));
+
+    // do a chi2 comparison between data and prediction (with mc or without?)
+  if ( true ) {
+    std::cout << ">>> Calculating Chi2... " << std::endl;
+    double chi2 = 0;
+    for (int ibin = 0; ibin <= QCDhists["A"]->GetNbinsX()+1; ++ibin) {
+      double expected = QCDhists["A"]->GetBinContent( ibin);
+      for (std::string proc : processes) {
+	if (proc != "data") {
+	  expected += hists[proc]->GetBinContent( ibin);
+	}
+      }
+      std::cout << "Expected: " << expected << std::endl;
+      std::cout << "Observed: " << hists["data"]->GetBinContent(ibin) << std::endl;
+      if (expected != 0) {
+	chi2 += pow((hists["data"]->GetBinContent(ibin) - expected), 2) / expected;
+      }
+    }
+    std::cout << "Chi Squared: " << chi2 << std::endl;
+  } // if (pb->doChi2)
   
   return QCDhists["A"];
 }
