@@ -15,11 +15,10 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
   // std::cout << ">>> Getting histograms" << std::endl;
   std::map<std::string, TH1F*> datahists;
   std::map<std::string, TH1F*> QCDhists;
-  std::map<std::string, TH1F*> prochists;
   std::map<std::string, TH1F*> hists; // this will have everythig we want to plot...
   
   // *** Try to save some memory here by only saving the histograms that we need...
-  for (string reg : {"A", "B", "C", "D"}){
+  for (string reg : {"B", "C", "D", "A"}){
     hists = {}; // reset for every region
     pb->currentRegion = reg;
     if (pb->verbosity > 1)
@@ -32,11 +31,9 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
       datahists[reg] = (TH1F*)gDirectory->Get(("procdata"+reg).c_str());
       hists["data"] = datahists[reg];
     }
-    for (std::string proc : processes) {
-      // what's going on here??
-      prochists[proc+"_"+reg] = (TH1F*)gDirectory->Get(("proc"+proc+reg).c_str());
-      hists[proc] = prochists[proc+"_"+reg];
-    }
+    for (std::string proc : processes)
+      hists[proc] = = (TH1F*)gDirectory->Get(("proc"+proc+reg).c_str());
+    
     QCDhists[reg]  = (TH1F*)datahists[reg]->Clone(("QCD_"+reg).c_str());
     QCDhists[reg]->Sumw2();
     
@@ -45,7 +42,7 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
       if ((proc != "signal") && (proc != "QCD") && (proc != "data")) {
 	if (pb->verbosity > 1)
 	  std::cout << "Subtracting: " << proc << std::endl;
-	QCDhists[reg]->Add(prochists[proc+"_"+reg], -1);
+	QCDhists[reg]->Add(hists[proc], -1);
       }
     }
     hists["QCD"] = QCDhists[reg];
@@ -87,15 +84,14 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
   // *** ESTIMATION ***
   // ******************
 
-  if (pb->verbosity > 1)
+  if (pb->verbosity > -1)
     std::cout << ">>> Getting obtained QCD background" << std::endl;
-  prochists["QCD"] = (TH1F*)QCDhists["B"]->Clone("QCD");
 
   // Don't forget about the last bin
-  for (int ibin = 0; ibin <= prochists["QCD"]->GetNbinsX()+1; ++ibin)
-    prochists["QCD"]->SetBinContent( ibin, prochists["QCD"]->GetBinContent(ibin) * histRatio->GetBinContent(ibin));
+  for (int ibin = 0; ibin <= QCDhists["B"]->GetNbinsX()+1; ++ibin)
+    QCDhists["A"]->SetBinContent( ibin, QCDhists["B"]->GetBinContent(ibin) * histRatio->GetBinContent(ibin));
   
-  return prochists["QCD"];
+  return QCDhists["A"];
 }
 
 #endif
