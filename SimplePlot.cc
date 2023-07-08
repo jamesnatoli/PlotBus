@@ -36,7 +36,8 @@ int SimplePlot( PlotBus* pb) {
   pb->xtitle = variable;
   // gErrorIgnoreLevel = kWarning;
 
-  pb->FillFiles( pb->year);
+  // should I do this in the constructor?
+  pb->FillFiles();
   pb->MergeFiles();
   map<string, vector<string>> files = pb->files;
 
@@ -62,7 +63,7 @@ int SimplePlot( PlotBus* pb) {
   std::cout << ">>> Plotting variable: " << variable
 	    << "\n" << std::endl;
 
-  pb->UnsetSignalRegionVars();
+  // pb->UnsetSignalRegionVars();
   int icount = 0;
   for(string proc : pb->processes){
     icount++;
@@ -73,9 +74,12 @@ int SimplePlot( PlotBus* pb) {
 
     if (proc != "QCD") {
       for (std::string reg : {"A", "B", "C", "D"}) {
-	if (pb->verbosity > 0)
-	  std::cout << (pb->getCutString( proc, reg)).c_str() << std::endl;
-	chain[proc].Draw((variable + ">>proc" + proc + reg + binning).c_str(), (pb->getCutString( proc, reg)).c_str());
+	if ((reg == "A") || doQCD) {
+	  pb->UnsetSignalRegionVars();
+	  if (pb->verbosity > 0)
+	    std::cout << (pb->getCutString( proc, reg)).c_str() << std::endl;
+	  chain[proc].Draw((variable + ">>proc" + proc + reg + binning).c_str(), (pb->getCutString( proc, reg)).c_str());
+	}
       }
     }
   }
