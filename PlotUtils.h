@@ -9,8 +9,23 @@
 #include "Analyzers.h"
 #include "PlotBus.cc"
 
-void makeRatioPlot( TH1F* histRatio, PlotBus* pb) {
-  TCanvas *can = new TCanvas("Normalization ratio", "Normalization ratio", 600, 600);
+void manualbinlabels( TH1F* hist) {
+  hist->GetXaxis()->SetTitle("");
+  hist->GetXaxis()->SetBinLabel( 4,  "VVVLoose");
+  hist->GetXaxis()->SetBinLabel( 6,  "VVLoose");
+  hist->GetXaxis()->SetBinLabel( 8,  "VLoose");
+  hist->GetXaxis()->SetBinLabel( 10,  "Loose");
+  hist->GetXaxis()->SetBinLabel( 12, "Medium");
+  hist->GetXaxis()->SetBinLabel( 14, "Tight");
+  hist->GetXaxis()->SetBinLabel( 16, "VTight");
+  hist->GetXaxis()->SetBinLabel( 18, "VVTight");
+
+}
+
+void makeRatioPlot( TH1F* histRatio, PlotBus* pb,
+		    std::string yTitle="Region C over D",
+		    std::string plotTitle="Normalization Ratio") {
+  TCanvas *can = new TCanvas("Ratio", "Ratio", 600, 600);
   can->SetLeftMargin(0.14); // 0.1 -> 0.14
   can->SetRightMargin(0.06); // 0.1 -> 0.06
   can->SetTickx();
@@ -22,10 +37,10 @@ void makeRatioPlot( TH1F* histRatio, PlotBus* pb) {
   histRatio->SetMarkerColor(1);
   histRatio->GetXaxis()->SetTitle("Inv. W boson mass [GeV]");
   // histRatio->GetXaxis()->SetRangeUser( lowfitbin, highfitbin);
-  histRatio->GetYaxis()->SetTitle("Region C over D");
+  histRatio->GetYaxis()->SetTitle( yTitle.c_str());
   histRatio->GetYaxis()->SetRangeUser( -0.5, 1);
   // histRatio->GetYaxis()->SetRangeUser( 0.0, 0.5);
-  histRatio->SetTitle("Normalization ratio");
+  histRatio->SetTitle( plotTitle.c_str());
   histRatio->Draw("E1");
   
   can->SaveAs((pb->filepath + "/QCD_normailzation_" + pb->filename + "_" + pb->getyear()  + ".png").c_str());
@@ -35,6 +50,8 @@ void makeRatioPlot( TH1F* histRatio, PlotBus* pb) {
 void drawTallest( TList* thingsToDraw, PlotBus* pb) {
   // TODO: deal with logy issue...
   float scaleAxis = 1.25;
+  if (pb->logy)
+    scaleAxis *= 20;
   TObject* tallest;
   float maxheight = -1;
   for (const auto&& obj : *thingsToDraw) {
@@ -52,14 +69,16 @@ void drawTallest( TList* thingsToDraw, PlotBus* pb) {
   }
 
   if ( std::string(tallest->GetName()).find("data") != std::string::npos ) {
-    tallest->Draw("E1");
+    tallest->Draw("E1");    
   } else {
-    if (tallest->IsA() == TClass::GetClass("THStack")) {
+    if (tallest->IsA() == TClass::GetClass("THStack")) { // THStacks need max/min set prior to drawing
       if (pb->verbosity > 1)
-	std::cout << ">>> Setting Maximum to " << (int)(maxheight*scaleAxis) << std::endl;
+	std::cout << ">>> Setting Maximum (THStack) to " << (maxheight*scaleAxis) << std::endl;
       // ROOT approved way, ugh
       // https://root-forum.cern.ch/t/thstack-what-is-the-correct-way-to-set-the-y-axis-limits/41851/9
-      ((THStack*)tallest)->SetMaximum( (int)(maxheight*scaleAxis)); 
+      ((THStack*)tallest)->SetMaximum( (maxheight*scaleAxis));
+      if (pb->logy)
+	((THStack*)tallest)->SetMinimum( 0.01);
     }
     tallest->Draw("HIST");
   }
@@ -69,8 +88,12 @@ void drawTallest( TList* thingsToDraw, PlotBus* pb) {
     ((TH1F*)tallest)->GetXaxis()->SetTitle( pb->getxtitle());
     ((TH1F*)tallest)->GetYaxis()->SetTitle("Events");
     if (pb->verbosity > 1)
-      std::cout << ">>> Setting Maximum to " << (int)(maxheight*scaleAxis) << std::endl;
-    ((TH1F*)tallest)->GetYaxis()->SetRangeUser(0, (int)(maxheight*scaleAxis)); // account for error bars
+      std::cout << ">>> Setting Maximum (TH1F) to " << (maxheight*scaleAxis) << std::endl;
+    ((TH1F*)tallest)->GetYaxis()->SetRangeUser(0, (maxheight*scaleAxis)); // account for error bars
+    if (pb->logy)
+      ((TH1F*)tallest)->GetYaxis()->SetRangeUser(0.01, (maxheight*scaleAxis));
+    if (pb->DeepTauBinLabels)
+      manualbinlabels( (TH1F*)tallest);
   } else if (tallest->IsA() == TClass::GetClass("THStack")) {
     ((THStack*)tallest)->SetTitle( pb->gettitle());
     ((THStack*)tallest)->GetXaxis()->SetTitle( pb->getxtitle());
@@ -159,14 +182,18 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
     hists["data"]->SetStats(false);
     hists["data"]->Draw("E1SAME");
   }
-  
-  legend->Draw();
+
+  if (pb->drawLegend)
+    legend->Draw();
 
   if (pb->logy) 
     can->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegionString()+"_"+pb->getyear()+"_logy.png").c_str());
   else
     can->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegionString()+"_"+pb->getyear()+".png").c_str());
 
+  if (pb->saveCanvas)
+    can->Print( ( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegionString()+"_"+pb->getyear()+".C").c_str());
+  
   if (pb->saveHists) {
     std::cout << ">>> Saving histograms as .C files in histMacros/" << std::endl;
     for (auto const &hist : hists) {
@@ -179,7 +206,7 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
 void makeRegionPlot( std::map<std::string, TH1F*> hists, PlotBus* pb, std::string region) {
   pb->currentRegion = region;
   if (pb->qcdInfo)
-    pb->title = pb->RegionTitles[region];
+    pb->title = pb->getRegionTitle();
   makePlot( hists, pb);
 }
 
