@@ -5,6 +5,7 @@
 // Root Includes
 
 // C++ Includes
+#include <regex>
 
 // Personal Includes
 
@@ -12,22 +13,26 @@ class PlotBus {
 public:
   // Constructor
   PlotBus();
-  PlotBus( int year);
+  PlotBus( std::string, std::string , int);
   
   bool logy;
   bool logandlin;
   bool mergeSamples;
   bool saveHists;
+  bool saveCanvas;
   bool plotData;
   bool plotDataSR;
   bool plotSignal;
   bool normalize;
   bool stack;
   bool fillHists;
+  bool drawLegend;
   bool doQCD;
   bool overflow;
   bool ControlRegion;
   bool qcdInfo;
+  bool doChi2;
+  bool DeepTauBinLabels;
   
   int nbins;
   double lowbin, highbin;
@@ -35,16 +40,19 @@ public:
   
   int verbosity;
   int year;
+  Double_t Luminosity;
+  std::string era;
+  std::string channel;
   std::string filename;
   std::string filepath;
-  std::string era;
-  std::string mainpath;
+  std::string prefix;
   std::string variable;
   std::string title;
   std::string xtitle;
   std::string addCuts;
   std::string currentRegion;
   std::map<std::string, std::string> RegionTitles;
+  std::map<std::string, std::string> ValRegionTitles;
 
   std::vector<std::string> signalfiles;
   std::vector<std::string> datafiles;
@@ -56,11 +64,13 @@ public:
   int deepTauVsMu;
   int deepTauVsJet;
   int Wpt;
-  int SignalScale;
-  float IsoTrack_iso;
+  float MaxdR;
   float Dxy;
   float Dz;
+  float IsoTrack_iso;
   bool bjetVeto;
+  
+  int SignalScale;
   std::string manualCutString;
   std::string eventCuts;
   std::string tripletCuts;
@@ -85,6 +95,7 @@ public:
   // Samples to Merge
   std::map< std::string, std::string> bkgsParts = {};
   std::map< std::string, std::vector<std::string>> samplesToMerge = {};
+  static std::map< std::string, int> colors;
 
   // Chains
   TChain* signalchain;
@@ -110,6 +121,7 @@ public:
   std::string getDeepTauVsJet();
   std::string getDeepTauString();
   std::string getWptString();
+  std::string getMaxdRString();
   std::string getDxyString();
   std::string getDzString();
   std::string getBjetVetoString();
@@ -132,19 +144,22 @@ public:
   std::string getCutString( std::string, std::string);
 
   std::string getRegionCut( std::string);
-  
-  std::string getRegionCutsA()  { return "(" +  SRcut1_scale + ") && (" +  SRcut2_shape + ")"; };
-  std::string getRegionCutsB()  { return "!(" + SRcut1_scale + ") && (" +  SRcut2_shape + ")"; };
-  std::string getRegionCutsC()  { return "(" +  SRcut1_scale + ") && !(" + SRcut2_shape + ")"; };
+
+  // scale is TrackIso, Shape is DeepTau
+  std::string getRegionCutsA()  { return "("  + SRcut1_scale + ") && ("  + SRcut2_shape + ")"; };
+  std::string getRegionCutsB()  { return "!(" + SRcut1_scale + ") && ("  + SRcut2_shape + ")"; };
+  std::string getRegionCutsC()  { return "("  + SRcut1_scale + ") && !(" + SRcut2_shape + ")"; };
   std::string getRegionCutsD()  { return "!(" + SRcut1_scale + ") && !(" + SRcut2_shape + ")"; };
   std::string getRegionString() { return ("_Reg" + currentRegion).c_str(); };
-  std::string getRegionTitle()  { return  RegionTitles[currentRegion]; };
+  std::string getRegionTitle();
+  // std::string getRegionTitle()  { return  RegionTitles[currentRegion]; };
   
   std::string getRegionCutData( std::string region);
   std::string getRegionCutSignal( std::string region);
   std::string getRegionCutMC( std::string region, std::string bkg);
 
   // Setters
+  void NoSignalRegion();
   void UnsetSignalRegionVars();
   void MuonControlRegion();
   void QCDControlRegion();
@@ -152,13 +167,17 @@ public:
   // void SetDataChain( TChain* chain);
 
   void MergeFiles();
-  void FillFiles( int year);
+  void FillFiles();
   int MergeSamples( std::map<std::string, TH1F*> *phists);
+  void UseNormWeight( std::string inWeight);
 };
 
-// Constructor takes year as parameter
-PlotBus::PlotBus( int yr) {
-
+// Constructor takes era as parameter
+PlotBus::PlotBus( std::string era, std::string channel, int year) {
+  PlotBus::era = era;
+  PlotBus::year = year;
+  PlotBus::channel = channel;
+  
   // These are sort of defaults... can be overwritten
   files = {};
   processes = {"QCD", "DY", "DY10", "ST", "TT", "ttV", "VV", "VVV", "W+Jets"};
@@ -178,9 +197,8 @@ PlotBus::PlotBus( int yr) {
   };
   procsToStack = bkgsToPlot;
   bkgsParts = {{"DY10", "DY"}};
-  era  = "Wto3pi_2018_cont2";
-  mainpath = "/Volumes/WineCellar/KState/analysis/" + era + "/";
-  year = yr;
+  // prefix = "/Volumes/WineCellar/KState/analysis/";
+  prefix = "~/KState/Research/Wto3pi/ROOT/skims/";
   filepath = "plots_" + era + "/";
   currentRegion = "";
   
@@ -191,22 +209,35 @@ PlotBus::PlotBus( int yr) {
 		  {"C", "Ratio Numerator (C)"},
 		  {"D", "Ratio Denominator (D)"}
   };
+
+  ValRegionTitles = { 
+		     {"A", "|Q|=3 Validation Region (A)"},
+		     {"B", "|Q|=3 Shape Region (B)"},
+		     {"C", "|Q|=3 Ratio Numerator (C)"},
+		     {"D", "|Q|=3 Ratio Denominator (D)"}
+  };
   
   // Default Options
-  logy        = false;
-  logandlin   = false;
-  saveHists   = false;
-  plotData    = true;
-  plotDataSR  = false;
-  plotSignal  = true;
-  normalize   = false;
-  stack       = true;
-  fillHists   = true;
-  doQCD       = true;
-  overflow    = false;
-  ControlRegion = false;
-  qcdInfo     = false;
+  logy             = false;
+  logandlin        = false;
+  saveHists        = false;
+  saveCanvas       = false;
+  plotData         = true;
+  plotDataSR       = false;
+  plotSignal       = true;
+  normalize        = false;
+  stack            = true;
+  fillHists        = true;
+  drawLegend       = true;
+  doQCD            = true;
+  overflow         = false;
+  qcdInfo          = false;
+  doChi2           = false;
+  DeepTauBinLabels = false;
+
   verbosity   = 0;
+
+  // ControlRegion = false;
 
   // Default Cuts
   chargereq = 1;
@@ -216,6 +247,7 @@ PlotBus::PlotBus( int yr) {
   deepTauVsJet = 31; // Signal Region
 
   Wpt = 40;
+  MaxdR = 3.0;
 
   IsoTrack_iso = 0.1; // Signal Region
 
@@ -231,19 +263,15 @@ PlotBus::PlotBus( int yr) {
     
   SignalScale = 6;
   eventCuts   = "Trigger_ditau && !LeptonVeto";
-  tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && PionTriplet_TriggerMatched";
-  tripletCuts+= " && (min( min( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) > 0.5)";
-  
-  // Keep the various MC weights here
-  stdMCweight    = "(XSecMCweight * Generator_weight * PUweight * PionTriplet_TauSFweight)";
-  // We doubled the statistics for QCD MC (not being used anymore)
-  qcdMCweight    = "(XSecMCweight * Generator_weight * PUweight * PionTriplet_TauSFweight * 0.5)";
-  // LHE Weights don't need XSecMCweight (and by extension, GenWeight
-  stitchMCweight = "(PUweight * PionTriplet_TauSFweight)";
-  
+  // tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && PionTriplet_TriggerMatched";
+  // tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && !(PionTriplet_trailingIsTrack) && PionTriplet_TriggerMatched";
+  tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && PionTriplet_TriggerMatched";
+  tripletCuts+= " && (min( min( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) > 0.3)";
+
   if (year == 2018) {
     stitchDY    = "(LHE_Njets==0?1.83962:1)*(LHE_Njets==1?0.628821:1)*(LHE_Njets==2?0.492408:1)*(LHE_Njets==3?0.233581:1)*(LHE_Njets==4?0.263824:1)*(LHE_Njets>4?1.83962:1)";
     stitchWJ    = "(LHE_Njets==0?0.000243068:1)*(LHE_Njets==1?4.76252e-05:1)*(LHE_Njets==2?5.72344e-05:1)*(LHE_Njets>2?3.33674e-05:1)";
+    Luminosity  = 59.8;
   } else if (year == 2017) {
     stitchDY    = "(LHE_Njets==0?1.23794:1)*(LHE_Njets==1?0.40731:1)*(LHE_Njets==2?0.341136:1)*(LHE_Njets==3?0.163085:1)*(LHE_Njets==4?0.147498:1)*(LHE_Njets>4?1.23794:1)";
     stitchWJ    = "(LHE_Njets==0?0.000206766:1)*(LHE_Njets==1?1.26299:1)*(LHE_Njets==2?1.42966:1)*(LHE_Njets>2?2.47702:1)";
@@ -251,7 +279,18 @@ PlotBus::PlotBus( int yr) {
     stitchDY    = "1";
     stitchWJ    = "1";
     std::cout << "ERROR!!! Not a valid year: " << to_string( year) << std::endl;
+    std::cout << "Will use 2018 Luminosity (59.83) by default" << std::endl;
+    Luminosity  = 59.8;
   }
+  
+  // Keep the various MC weights here
+  stdMCweight    = "(XSecMCweight * Generator_weight * PUweight * PionTriplet_TauSFweight)";
+  // stdMCweight   += " * (nPionTriplet>0?sqrt((((8.929*(abs(PionTriplet_pion1_dxy)^(0.5)))+0.60725)^2)+(((8.929*(abs(PionTriplet_pion2_dxy)^(0.5)))+0.60725)^2)+(((8.929*(abs(PionTriplet_pion3_dxy)^(0.5)))+0.60725)^2)):1)";
+  
+  // We doubled the statistics for QCD MC (not being used anymore)
+  qcdMCweight    = "(XSecMCweight * Generator_weight * PUweight * PionTriplet_TauSFweight * 0.5)";
+  // LHE Weights don't need XSecMCweight (and by extension, GenWeight
+  stitchMCweight = "(PUweight * PionTriplet_TauSFweight)";
 
   MCweights   = {{"DY",     "(" + stitchDY + " * " + stitchMCweight + ")"},
 		 {"W+Jets", "(" + stitchWJ + " * " + stitchMCweight + ")"},
@@ -269,7 +308,7 @@ PlotBus::PlotBus( int yr) {
   // then remove it? 
   title  = variable;
   xtitle = title;
-}
+} // END CONSTRUCTOR
 
 std::string PlotBus::getDeepTauVsEl() {
   return ("(PionTriplet_LowestDeepTauVsEl >= "+to_string(deepTauVsEl)+")").c_str();
@@ -287,7 +326,14 @@ std::string PlotBus::getDeepTauString() {
 };
 
 std::string PlotBus::getWptString() {
-  return "(PionTriplet_pt > "+to_string(Wpt) + ")";
+  return "(PionTriplet_pt > " + to_string(Wpt) + ")";
+}
+
+std::string PlotBus::getMaxdRString() {
+  if (MaxdR == 0)
+    return "(max( max( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) > -1)";
+  else
+    return "(max( max( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) < " + to_string(MaxdR) +")";
 }
 
 std::string PlotBus::getDxyString() {
@@ -357,7 +403,8 @@ std::string PlotBus::getSelectionCut() {
   return ("(PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, " +
 	  PlotBus::getChargeReqString() + " && " +
 	  PlotBus::getTripletCuts() + " && " +
-	  PlotBus::getWptString() + " && " + 
+	  PlotBus::getWptString() + " && " +
+	  PlotBus::getMaxdRString() + " && " + 
 	  PlotBus::getDeepTauString() + " && " +
 	  PlotBus::getIsoTrackIsoString() + " && " +
 	  PlotBus::getDxyString() + " && " +
@@ -371,7 +418,8 @@ std::string PlotBus::getSelectionCut( std::string extras) {
     return ("(PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, " +
 	    PlotBus::getChargeReqString() + " && " +
 	    PlotBus::getTripletCuts() + " && " +
-	    PlotBus::getWptString() + " && " + 
+	    PlotBus::getWptString() + " && " +
+	    PlotBus::getMaxdRString() + " && " + 
 	    PlotBus::getDeepTauString() + " && " +
 	    PlotBus::getIsoTrackIsoString() + " && " +
 	    PlotBus::getDxyString() + " && " + 
@@ -382,7 +430,8 @@ std::string PlotBus::getSelectionCut( std::string extras) {
     return ("(PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, " +
 	    PlotBus::getChargeReqString() + " && " +
 	    PlotBus::getTripletCuts() + " && " +
-	    PlotBus::getWptString() + " && " + 
+	    PlotBus::getWptString() + " && " +
+	    PlotBus::getMaxdRString() + " && " + 
 	    PlotBus::getDeepTauString() + " && " +
 	    PlotBus::getIsoTrackIsoString() + " && " +
 	    PlotBus::getDxyString() + " && " + 
@@ -397,7 +446,8 @@ std::string PlotBus::getStdCutString() {
 	  PlotBus::getEventCuts() + " && " +
 	  PlotBus::getChargeReqString() + " && " +
 	  PlotBus::getTripletCuts() + " && " +
-	  PlotBus::getWptString() + " && " + 
+	  PlotBus::getWptString() + " && " +
+	  PlotBus::getMaxdRString() + " && " + 
 	  PlotBus::getDeepTauString() + " && " +
 	  PlotBus::getIsoTrackIsoString() + " && " +
 	  PlotBus::getDxyString() + " && " + 
@@ -411,7 +461,8 @@ std::string PlotBus::getStdCutString( std::string extras) {
 	  PlotBus::getEventCuts() + " && " +
 	  PlotBus::getChargeReqString() + " && " +
 	  PlotBus::getTripletCuts() + " && " +
-	  PlotBus::getWptString() + " && " + 
+	  PlotBus::getWptString() + " && " +
+	  PlotBus::getMaxdRString() + " && " + 
 	  PlotBus::getDeepTauString() + " && " +
 	  PlotBus::getIsoTrackIsoString() + " && " +
 	  PlotBus::getDxyString() + " && " + 
@@ -488,6 +539,13 @@ std::string PlotBus::getRegionCut( std::string region) {
   }
 }
 
+std::string PlotBus::getRegionTitle() {
+  if (chargereq == 1)
+    return RegionTitles[currentRegion];
+  else
+    return ValRegionTitles[currentRegion];
+}
+
 std::string PlotBus::getRegionCutData( std::string region) {
   return (PlotBus::getFullCutString(PlotBus::getRegionCut(region)) + " && " +
 	  PlotBus::getRegionCut( region));
@@ -505,6 +563,11 @@ std::string PlotBus::getRegionCutSignal( std::string region) {
 	  PlotBus::getRegionCut(region) + ")");
 };
 
+void PlotBus::NoSignalRegion() {
+  SRcut1_scale = "(1)";
+  SRcut2_shape = "(1)";
+}
+
 void PlotBus::UnsetSignalRegionVars() {
   deepTauVsJet = 1;
   IsoTrack_iso = 0;
@@ -520,7 +583,7 @@ void PlotBus::MuonControlRegion() {
     eventCuts   = "Trigger_ditau";
     deepTauVsMu = 0;
     
-    mainpath = "~/KState/Research/Wto3pi/ROOT/skimsDY/" + era;
+    // mainpath = "~/KState/Research/Wto3pi/ROOT/skimsDY/" + era;
     title    += " Muon CR";
     filename += "_MuonCR";
     if (verbosity > 0) {
@@ -529,8 +592,8 @@ void PlotBus::MuonControlRegion() {
 		<< "PlotSignal : false" << std::endl
 		<< "TripeltCuts: " << tripletCuts << " (muon pgdID = 13)" << std::endl
 		<< "EventCuts  : " << eventCuts << " (no lepton veto)" << std::endl
-		<< "DeepTauVsMu: None" << std::endl
-		<< "Using Files: " << mainpath << "\n" << std::endl;
+		<< "DeepTauVsMu: None" << std::endl;
+	// 		<< "Using Files: " << mainpath << "\n" << std::endl;
     }
   } else
     std::cout << ">> Control region already set... BE CAREFUL" << std::endl;
@@ -548,13 +611,13 @@ void PlotBus::QCDControlRegion() {
     
     title    += " QCD CR";
     filename += "_qcdCR";
-    if (verbosity > 0) {
+    if (verbosity >= 0) {
       std::cout << "\nIn the QCD control region... " << std::endl
 		<< "Proccesses  : " << PlotBus::getProcesses() << std::endl
 		<< "PlotSignal  : false" << std::endl
 		<< "DeepTauVsJet: None" << std::endl
-		<< "Charge (|Q|): 3" << std::endl
-		<< "Using Files: " << mainpath << "\n" << std::endl;
+		<< "Charge (|Q|): 3" << std::endl;
+	// 		<< "Using Files: " << mainpath << "\n" << std::endl;
     }
   } else
     std::cout << ">> Control region already set... BE CAREFUL" << std::endl;
@@ -618,6 +681,24 @@ int PlotBus::MergeSamples( std::map<std::string, TH1F*> *phists) {
     } // end sample loop
   } // end merger loop
   return 0;
+}
+
+// Option to use the normalized weight for crosscheck with Plotter
+void PlotBus::UseNormWeight(std::string inWeight="") {
+  if (inWeight == "")
+    inWeight = "(XSec * " + to_string(Luminosity) + " * 1000 * (1/SumOfWeights) * Generator_weight * PUweight * PionTriplet_TauSFweight)";
+
+  MCweights   = {{"DY",     "(" + stitchDY + " * " + stitchMCweight + ")"},
+		 {"W+Jets", "(" + stitchWJ + " * " + stitchMCweight + ")"},
+		 {"DY10",   inWeight},
+		 {"ST",     inWeight},
+		 {"TT",     inWeight},
+		 {"ttV",    inWeight},
+		 {"VV",     inWeight},
+		 {"VVV",    inWeight},
+		 {"QCD MC", inWeight},
+  };
+  weights = MCweights;
 }
  
 // for the extra methods
