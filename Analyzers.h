@@ -50,15 +50,16 @@ void printYields( std::map<std::string, std::vector<std::string>> yields, std::s
 void CalculateYields( std::map<std::string, TH1F*> hists, std::map<std::string, std::vector<std::string>>* yields,
 		      TLegend* legend, PlotBus* pb) {
   stringstream integ;
+  int prec = 6;
   // Loop over only the backgrounds that we want to plot
   for (auto const& hist : hists) {
     if (pb->overflow) {
-      integ << fixed << setprecision(6) << hist.second->Integral( 0, hist.second->GetNbinsX()+1);
+      integ << fixed << setprecision( prec) << hist.second->Integral( 0, hist.second->GetNbinsX()+1);
       std::vector<std::string> vec{ integ.str(), to_string( (int)hist.second->GetEntries() +
 							    (int)hist.second->GetBinContent( hist.second->GetNbinsX()+1))};
       (*yields)[hist.first] = vec;
     } else {
-      integ << fixed << setprecision(2) << hist.second->GetSumOfWeights();
+      integ << fixed << setprecision( prec) << hist.second->GetSumOfWeights();
       std::vector<std::string> vec{ integ.str(), to_string( (int)hist.second->GetEntries())};
       (*yields)[hist.first] = vec;
     }
@@ -86,33 +87,5 @@ void getYieldsAndEntries( map<string, TH1F*> hists, TLegend* legend,
   if (pb->verbosity >= 0)
     printYields( yields, pb->currentRegion);
 }
-
-/*
-void getYieldsAndEntries( TH1F* datahist, TH1F* signalhist, map<string, TH1F*> bkghists, TLegend* legend,
-			  PlotBus* pb, std::string region) {
-  stringstream integ;
-  std::map<std::string, std::vector<std::string>> yields = {};
-  
-  // Add everything together to loop over...
-  std::map<string, TH1F*> hists = {};
-  for (auto const &bkg : bkghists) {
-    std::string proc = bkg.first.substr( 0, bkg.first.find("_"));
-    std::string procRegion = bkg.first.substr( bkg.first.find("_")+1);
-    if ((procRegion == region) || (proc.find("QCD") != std::string::npos)) {
-      hists[proc] = bkg.second;
-      hists[proc]->SetFillColor( colors[proc]);
-      hists[proc]->SetStats( false);
-    }
-  }
-
-  hists["Signal"] = signalhist;
-  if (datahist)
-    hists["Data"] = datahist;
-
-  CalculateYields( hists, &yields, legend, pb);
-  if (pb->verbosity > 0)
-    printYields( yields, "Region " + region);
-}
-*/
 
 #endif
