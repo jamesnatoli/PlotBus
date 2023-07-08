@@ -16,6 +16,7 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
   std::map<std::string, TH1F*> datahists;
   std::map<std::string, TH1F*> QCDhists;
   std::map<std::string, TH1F*> hists; // this will have everythig we want to plot...
+  std::map<std::string, TH1F*> prochists; // in case we merge and don't want to plot everything
   
   // *** Try to save some memory here by only saving the histograms that we need...
   for (string reg : {"B", "C", "D", "A"}){
@@ -45,6 +46,7 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
     }
     
     hists["QCD"] = QCDhists[reg];
+    prochists = hists;
     pb->MergeSamples( &hists);
     if (reg != "A" && pb->qcdInfo)
       makeRegionPlot( hists, pb, reg);
@@ -91,20 +93,23 @@ TH1F* doQCDestimation( PlotBus* pb, std::string binning) {
     QCDhists["A"]->SetBinContent( ibin, QCDhists["B"]->GetBinContent(ibin) * histRatio->GetBinContent(ibin));
 
     // do a chi2 comparison between data and prediction (with mc or without?)
-  if ( true ) {
+  if ( pb->doChi2 ) {
     std::cout << ">>> Calculating Chi2... " << std::endl;
     double chi2 = 0;
     for (int ibin = 0; ibin <= QCDhists["A"]->GetNbinsX()+1; ++ibin) {
-      double expected = QCDhists["A"]->GetBinContent( ibin);
+      double expected = prochists["signal"]->GetBinContent( ibin);
       for (std::string proc : processes) {
 	if (proc != "data") {
-	  expected += hists[proc]->GetBinContent( ibin);
+	  // std::cout << "proc: " << proc << std::endl;
+	  expected += prochists[proc]->GetBinContent( ibin);
 	}
       }
-      std::cout << "Expected: " << expected << std::endl;
-      std::cout << "Observed: " << hists["data"]->GetBinContent(ibin) << std::endl;
+      if (pb->verbosity > 0) {
+	std::cout << "Expected: " << expected << std::endl;
+	std::cout << "Observed: " << prochists["data"]->GetBinContent(ibin) << std::endl;
+      }
       if (expected != 0) {
-	chi2 += pow((hists["data"]->GetBinContent(ibin) - expected), 2) / expected;
+	chi2 += pow((prochists["data"]->GetBinContent(ibin) - expected), 2) / expected;
       }
     }
     std::cout << "Chi Squared: " << chi2 << std::endl;
