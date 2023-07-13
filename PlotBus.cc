@@ -18,6 +18,7 @@ public:
   bool logy;
   bool logandlin;
   bool mergeSamples;
+  bool manualFiles;
   bool saveHists;
   bool saveCanvas;
   bool plotData;
@@ -184,6 +185,7 @@ PlotBus::PlotBus( std::string era, std::string channel, int year) {
   bkgsToPlot = {"QCD", "DY", "TT", "VV"};
 
   mergeSamples   = true;
+  manualFiles    = false;
   samplesToMerge = {
 		    {"DY",
 		     {"DY10"}
@@ -263,9 +265,10 @@ PlotBus::PlotBus( std::string era, std::string channel, int year) {
     
   SignalScale = 6;
   eventCuts   = "Trigger_ditau && !LeptonVeto";
-  // tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && PionTriplet_TriggerMatched";
   // tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && !(PionTriplet_trailingIsTrack) && PionTriplet_TriggerMatched";
-  tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && PionTriplet_TriggerMatched";
+  tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && PionTriplet_TriggerMatched";
+  // tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack)";
+  
   tripletCuts+= " && (min( min( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) > 0.3)";
 
   if (year == 2018) {
@@ -279,7 +282,7 @@ PlotBus::PlotBus( std::string era, std::string channel, int year) {
     stitchDY    = "1";
     stitchWJ    = "1";
     std::cout << "ERROR!!! Not a valid year: " << to_string( year) << std::endl;
-    std::cout << "Will use 2018 Luminosity (59.83) by default" << std::endl;
+    std::cout << "Will use 2018 Luminosity (59.83) by default, unless set manually" << std::endl;
     Luminosity  = 59.8;
   }
   
@@ -688,6 +691,8 @@ void PlotBus::UseNormWeight(std::string inWeight="") {
   if (inWeight == "")
     inWeight = "(XSec * " + to_string(Luminosity) + " * 1000 * (1/SumOfWeights) * Generator_weight * PUweight * PionTriplet_TauSFweight)";
 
+  stdMCweight = inWeight;
+  
   MCweights   = {{"DY",     "(" + stitchDY + " * " + stitchMCweight + ")"},
 		 {"W+Jets", "(" + stitchWJ + " * " + stitchMCweight + ")"},
 		 {"DY10",   inWeight},
