@@ -8,6 +8,7 @@
 #include <regex>
 
 // Personal Includes
+#include "W3pi_weightadder.C"
 
 class PlotBus {
 public:
@@ -34,6 +35,7 @@ public:
   bool qcdInfo;
   bool doChi2;
   bool DeepTauBinLabels;
+  bool getBinSig;
   
   int nbins;
   double lowbin, highbin;
@@ -41,6 +43,8 @@ public:
   
   int verbosity;
   int year;
+  bool preVFP;
+  bool postVFP;
   Double_t Luminosity;
   std::string era;
   std::string channel;
@@ -81,6 +85,7 @@ public:
   std::string stitchMCweight;
   std::string stitchDY;
   std::string stitchWJ;
+  std::string TTbar_NNLOweight;
   // This allows you to set your own weights, if you want
   std::map< std::string, std::string> weights;
   std::map< std::string, std::string> MCweights;
@@ -166,6 +171,7 @@ public:
   void QCDControlRegion();
   void SetSignalChain( TObject* chain);
   // void SetDataChain( TChain* chain);
+  void UseFullSamples( std::string);
 
   void MergeFiles();
   void FillFiles();
@@ -176,8 +182,9 @@ public:
 // Constructor takes era as parameter
 PlotBus::PlotBus( std::string era, std::string channel, int year) {
   PlotBus::era = era;
-  PlotBus::year = year;
   PlotBus::channel = channel;
+  PlotBus::year = year;
+
   
   // These are sort of defaults... can be overwritten
   files = {};
@@ -199,7 +206,6 @@ PlotBus::PlotBus( std::string era, std::string channel, int year) {
   };
   procsToStack = bkgsToPlot;
   bkgsParts = {{"DY10", "DY"}};
-  // prefix = "/Volumes/WineCellar/KState/analysis/";
   prefix = "~/KState/Research/Wto3pi/ROOT/skims/";
   filepath = "plots_" + era + "/";
   currentRegion = "";
@@ -236,6 +242,7 @@ PlotBus::PlotBus( std::string era, std::string channel, int year) {
   qcdInfo          = false;
   doChi2           = false;
   DeepTauBinLabels = false;
+  getBinSig        = false;
 
   verbosity   = 0;
 
@@ -265,19 +272,32 @@ PlotBus::PlotBus( std::string era, std::string channel, int year) {
     
   SignalScale = 6;
   eventCuts   = "Trigger_ditau && !LeptonVeto";
-  // tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && !(PionTriplet_trailingIsTrack) && PionTriplet_TriggerMatched";
-  tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && PionTriplet_TriggerMatched";
-  // tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack)";
+  // TriggerMatching is broken in 2018D... not really necessary anyways
+  // tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && PionTriplet_TriggerMatched";
+  // tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && !(PionTriplet_trailingIsTrack)";
+  tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack)";
   
   tripletCuts+= " && (min( min( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) > 0.3)";
 
   if (year == 2018) {
     stitchDY    = "(LHE_Njets==0?1.83962:1)*(LHE_Njets==1?0.628821:1)*(LHE_Njets==2?0.492408:1)*(LHE_Njets==3?0.233581:1)*(LHE_Njets==4?0.263824:1)*(LHE_Njets>4?1.83962:1)";
-    stitchWJ    = "(LHE_Njets==0?0.000243068:1)*(LHE_Njets==1?4.76252e-05:1)*(LHE_Njets==2?5.72344e-05:1)*(LHE_Njets>2?3.33674e-05:1)";
+    stitchWJ    = "(LHE_Njets==0?2.1238030067e-04:1)*(LHE_Njets==1?9.4034644862e-05:1)*(LHE_Njets==2?7.8360783678e-05:1)*(LHE_Njets>2?8.1203167262e-05:1)";
+    TTbar_NNLOweight = "Weight_TTbar_NNLO";
     Luminosity  = 59.8;
   } else if (year == 2017) {
-    stitchDY    = "(LHE_Njets==0?1.23794:1)*(LHE_Njets==1?0.40731:1)*(LHE_Njets==2?0.341136:1)*(LHE_Njets==3?0.163085:1)*(LHE_Njets==4?0.147498:1)*(LHE_Njets>4?1.23794:1)";
-    stitchWJ    = "(LHE_Njets==0?0.000206766:1)*(LHE_Njets==1?1.26299:1)*(LHE_Njets==2?1.42966:1)*(LHE_Njets>2?2.47702:1)";
+    stitchDY = "(LHE_Njets==0?1.23734:1)*(LHE_Njets==1?0.414618:1)*(LHE_Njets==2?0.370996:1)*(LHE_Njets==3?0.215047:1)*(LHE_Njets==4?0.164546:1)*(LHE_Njets>4?1.23734:1)";
+    stitchWJ = "(LHE_Njets==0?1.5334343878e-04:1)*(LHE_Njets==1?6.7497287730e-05:1)*(LHE_Njets==2?5.4048680964e-05:1)*(LHE_Njets>2?5.5666140133e-05:1)";
+    Luminosity  = 41.5;
+  } else if ((year == 2016) && (postVFP)){
+    std::cout << "No DY stitching weights for year: " << to_string( year) << std::endl;
+    stitchDY = "1";
+    stitchWJ = "(LHE_Njets==0?6.3492381179e-05:1)*(LHE_Njets==1?2.8788703517e-05:1)*(LHE_Njets==2?2.4297924110e-05:1)*(LHE_Njets>2?2.5215777910e-05:1)";
+    Luminosity  = 16.8;
+  } else if ((year == 2016) && (preVFP)){
+    std::cout << "No DY stitching weights for year: " << to_string( year) << std::endl;
+    stitchDY = "1";
+    stitchWJ = "(LHE_Njets==0?7.6176665591e-05:1)*(LHE_Njets==1?3.2866842007e-05:1)*(LHE_Njets==2?2.7493712509e-05:1)*(LHE_Njets>2?2.8571509261e-05:1)";
+    Luminosity  = 19.5;
   } else {
     stitchDY    = "1";
     stitchWJ    = "1";
@@ -299,7 +319,7 @@ PlotBus::PlotBus( std::string era, std::string channel, int year) {
 		 {"W+Jets", "(" + stitchWJ + " * " + stitchMCweight + ")"},
 		 {"DY10",   stdMCweight},
 		 {"ST",     stdMCweight},
-		 {"TT",     stdMCweight},
+		 {"TT",     "(" + stdMCweight + "*" + TTbar_NNLOweight + ")"},
 		 {"ttV",    stdMCweight},
 		 {"VV",     stdMCweight},
 		 {"VVV",    stdMCweight},
@@ -586,7 +606,6 @@ void PlotBus::MuonControlRegion() {
     eventCuts   = "Trigger_ditau";
     deepTauVsMu = 0;
     
-    // mainpath = "~/KState/Research/Wto3pi/ROOT/skimsDY/" + era;
     title    += " Muon CR";
     filename += "_MuonCR";
     if (verbosity > 0) {
@@ -596,7 +615,6 @@ void PlotBus::MuonControlRegion() {
 		<< "TripeltCuts: " << tripletCuts << " (muon pgdID = 13)" << std::endl
 		<< "EventCuts  : " << eventCuts << " (no lepton veto)" << std::endl
 		<< "DeepTauVsMu: None" << std::endl;
-	// 		<< "Using Files: " << mainpath << "\n" << std::endl;
     }
   } else
     std::cout << ">> Control region already set... BE CAREFUL" << std::endl;
@@ -620,7 +638,6 @@ void PlotBus::QCDControlRegion() {
 		<< "PlotSignal  : false" << std::endl
 		<< "DeepTauVsJet: None" << std::endl
 		<< "Charge (|Q|): 3" << std::endl;
-	// 		<< "Using Files: " << mainpath << "\n" << std::endl;
     }
   } else
     std::cout << ">> Control region already set... BE CAREFUL" << std::endl;
@@ -633,6 +650,14 @@ void PlotBus::SetSignalChain( TObject* chain) {
 // void PlotBus::SetDataChain( TChain* chain) {
 //   datachain = chain;
 // };
+
+void PlotBus::UseFullSamples( std::string s="") {
+  if (s != "")
+    prefix = s;
+  else
+    prefix = "/Volumes/WineCellar/KState/analysis/";
+    
+}
 
 void PlotBus::MergeFiles() {
   files.insert( bkgfiles.begin(), bkgfiles.end());

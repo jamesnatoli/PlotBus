@@ -15,70 +15,80 @@
 #include <math.h>
 #include <assert.h> 
 #include <iomanip>
+#include <chrono>
 
 using namespace std;
-#include "/Users/jamesnatoli/KSTATE/Research/Wto3pi/Plotting/SimplePlot.cc"
+#include "/Users/jamesnatoli/KSTATE/Research/Wto3pi/PlotBus/SimplePlot.cc"
+#include "/Users/jamesnatoli/KSTATE/Research/Wto3pi/PlotBus/W3pi_weightadder.C"
 
 int main(int argc, char *argv[]) {
 
   std::string era = "Wto3pi_2018_cont2";
-  PlotBus* plotbus = new PlotBus( 2018);
-  plotbus->mainpath = "~/KState/Research/Wto3pi/ROOT/skims/" + era;
-  plotbus->era  = era;
+  std::string channel = "Wto3pi_postfix2_2018";
+  PlotBus* plotbus = new PlotBus( era, channel, 2018);
+  // plotbus->UseFullSamples();
 
-  plotbus->filepath += "Tuning";
-  plotbus->filename = "InvMass_StartingPoint";
+  // plotbus->filepath += "Nominal";
+  plotbus->filename = "InvMass_test";
   plotbus->variable = "PionTriplet_MassInv";
+  plotbus->xtitle   = "Inv Mass [GeV]";
   plotbus->title    = "Inv Mass";
 
   // Probably just hard code this now?
-  plotbus->addCuts = " (1) ";
-  plotbus->addCuts += " && (PionTriplet_pt > 40)";
-  // plotbus->addCuts += " && (max(max(PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) < 2.4)";
+  // plotbus->addCuts = " (1) ";
+  // plotbus->addCuts += " && (max(max(PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) < 3.0)";
 
-  // Ok, try a B-jet veto?
-  std::string bjetveto = "0.5";
   // plotbus->deepTauVsEl = 15;
-  // plotbus->bjetVeto = true;
-  // plotbus->addCuts += " && (Sum$( (Jet_btagDeepB[ CleanJet_jetIdx] > "+bjetveto+") && (CleanJet_pt > 20) && (abs(CleanJet_eta) < 2.5)) == 0)";
-  // plotbus->addCuts += " && (PionTriplet_dphi_12 < 2.4)";
-  // plotbus->addCuts += " && (PionTriplet_dphi_23 < 2.4)";
-  
-  plotbus->Dxy = 100.0;
-  plotbus->Dz  = 100.0;
-
-  /*
-  plotbus->processes  = {"ST_Top", "ST_TopUp", "ST_TopDown"};
-  // plotbus->processes  = {"ST_AntiTop", "ST_AntiTopUp", "ST_AntiTopDown"};
-  plotbus->weights = { {"ST_Top",     plotbus->MCweights["ST"]},
-		       {"ST_TopUp",   plotbus->MCweights["ST"]},
-		       {"ST_TopDown", plotbus->MCweights["ST"]},
-		       {"ST_AntiTop",     plotbus->MCweights["ST"]},
-		       {"ST_AntiTopUp",   plotbus->MCweights["ST"]},
-		       {"ST_AntiTopDown", plotbus->MCweights["ST"]}
-  };
-  */
 
   // plotbus->manualCutString = "( (PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, (abs(PionTriplet_charge) == 1) && (abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && (PionTriplet_LowestDeepTauVsEl >= 0) && (PionTriplet_LowestDeepTauVsMu >= 0) && (PionTriplet_LowestDeepTauVsJet >= 0) && (PionTriplet_pion3_iso >= 0) )) && Trigger_ditau && !LeptonVeto && (abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && (abs(PionTriplet_charge) == 1) && (PionTriplet_LowestDeepTauVsEl >= 0) && (PionTriplet_LowestDeepTauVsMu >= 0) && (PionTriplet_LowestDeepTauVsJet >= 0) && (PionTriplet_pion3_iso >= 0))";
+
+  // Nominal
+  plotbus->Dxy = 0.045;
+  plotbus->Dz  = 0.2;
+  // plotbus->Wpt = 0;
   
-  plotbus->nbins      = 35;
-  plotbus->lowbin     = 0;
-  plotbus->highbin    = 350;
-  plotbus->chargereq  = 1;
+  // Low Purity
+  // plotbus->Dxy = 0.01;
+  // plotbus->Dz  = 0.05;
+  plotbus->Wpt = 0;
+  plotbus->MaxdR = 0;
+  
+  // High Purity
+  // plotbus->Dxy = 0.005;
+  // plotbus->Dz  = 0.01;
+  // plotbus->Wpt = 75;
+  // plotbus->addCuts  = "(max( max( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) < 3.0)";
+
+  plotbus->nbins     = 40;
+  plotbus->lowbin    = 0;
+  plotbus->highbin   = 400;
+
+  plotbus->getBinSig    = false;
+  plotbus->saveHists    = false;
+  plotbus->saveCanvas   = false;
+  plotbus->plotSignal   = true;
+  plotbus->stack        = true;
+  plotbus->overflow     = false;
+  plotbus->fillHists    = true;
+  plotbus->qcdInfo      = true;
+  plotbus->mergeSamples = true;
+  std::string DxyDzWeight = "IPweight( abs(PionTriplet_pion1_dxy), abs(PionTriplet_pion1_dz), abs(PionTriplet_pion2_dxy), abs(PionTriplet_pion2_dz), abs(PionTriplet_pion3_dxy), abs(PionTriplet_pion3_dz))";
+  plotbus->UseNormWeight( "(XSec * " + to_string(plotbus->Luminosity) + " * 1000 * (1/SumOfWeights) * Generator_weight * PUweight * PionTriplet_TauSFweight * " + DxyDzWeight + ")");
+
+  W3pi_weightadder();
+
+  plotbus->verbosity   = 0;
   plotbus->SignalScale = 6;
-  
-  plotbus->logy       = false;
-  plotbus->saveHists  = true;
-  plotbus->plotSignal = true;
-  plotbus->plotData   = false;
-  plotbus->stack      = true;
-  plotbus->overflow   = false;
-  plotbus->fillHists  = true;
-    
-  plotbus->verbosity = 0;
+
+  // plotbus->procsToStack = plotbus->processes;
+  plotbus->procsToStack = {"QCD", "MultiBoson", "DY", "Top"};
 
   // Now Run
-  SimplePlot( plotbus);    
+  auto start = std::chrono::high_resolution_clock::now();
+  SimplePlot( plotbus);
+  auto end = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
+  std::cout << ">>> Finished in " << duration.count() << " seconds" << std::endl;
 }
 
 
