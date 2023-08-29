@@ -115,3 +115,6 @@ This sets up the the object member `files` (`std::map<std::string, std::vector<s
 
 ## doQCDestimation.cc
 This is where the QCD estimation is done, it's kept in a seperate file for simplicity. This employs the ABCD method
+
+## Macros
+The `TTree::Draw` function supports the use of simple C++ functions. To make use of these, place the function in the `macros` directory. For clarity, add a function to the file with these functions which contains only a single line and executes `gRoot->ProcessLine(".L macros/myfile.C")`. Then in the variable runner, include this macros and call this function. An example is show for `W3pi_weightadder.C`
