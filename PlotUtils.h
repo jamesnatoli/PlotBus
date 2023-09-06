@@ -8,6 +8,7 @@
 
 #include "Analyzers.h"
 #include "PlotBus.cc"
+// Think about making a Plot class...
 
 void manualbinlabels( TH1F* hist) {
   hist->GetXaxis()->SetTitle("");
@@ -20,6 +21,90 @@ void manualbinlabels( TH1F* hist) {
   hist->GetXaxis()->SetBinLabel( 16, "VTight");
   hist->GetXaxis()->SetBinLabel( 18, "VVTight");
 
+}
+
+// Helper function to make a ratio just like TRatioPlot and draw it at the bottom
+void makeMyRatio( PlotBus* pb, THStack* st, TH1* dh, TCanvas* canMain) {
+  TCanvas *canRatio = new TCanvas("c", "Ratio", 800, 800);
+  TH1* histRatio = (TH1*)dh->Clone();
+  TList *stackHists = st->GetHists();
+  
+  if (stackHists->GetSize() == 0) {
+    std::cout << ">> ERROR: Stack does not have histograms" << std::endl;
+    return; // returns NULL object
+  }
+  TH1* tmpHist = (TH1*)stackHists->At(0)->Clone();
+  tmpHist->Reset();
+  
+  for (int i=0;i<stackHists->GetSize();++i) {
+    tmpHist->Add((TH1*)stackHists->At(i));
+  }
+  if (pb->doRatioDataMC) { 
+    histRatio->Divide( tmpHist);
+  } else { // standard
+    histRatio = (TH1*)tmpHist->Clone();
+    histRatio->Divide( dh);
+  }
+    
+  // Now make a new pad below
+  TPad *top = new TPad("top", "top", 0, 0.25, 1, 1.0);
+  top->SetBottomMargin(0.1);
+  top->Draw();
+  top->cd();
+  // Draw the main canvas on top pad
+  canMain->DrawClonePad();
+  // go back to Ratio Canvas before defining bottom
+  canRatio->cd();
+
+  // Now the Ratio on bottom
+  TPad *bottom = new TPad("bottom", "bottom", 0, 0.0, 1, 0.30);
+  bottom->SetTopMargin(0.1);
+  bottom->SetBottomMargin(0.3);
+  bottom->SetLeftMargin( canMain->GetLeftMargin());
+  bottom->SetRightMargin( canMain->GetRightMargin());
+  bottom->Draw();
+  // bottom becomes the current pad
+  bottom->cd();
+  histRatio->SetMarkerStyle(8);
+  // Use option "HIST" to override the associated errors
+  // https://root-forum.cern.ch/t/draw-option-c-in-histogram-is-not-responding/30820/3
+  histRatio->Draw("HIST P");
+
+  // Beautify the Ratio a bit
+  histRatio->SetTitle("");
+  
+  // Y axis ratio plot settings
+  histRatio->GetYaxis()->SetTitle("Obs. / Exp.");
+  // histRatio->GetYaxis()->SetNdivisions(505);
+  histRatio->GetYaxis()->SetTitleSize(20);
+  histRatio->GetYaxis()->SetTitleFont(43);
+  histRatio->GetYaxis()->SetTitleOffset(1.55);
+  histRatio->GetYaxis()->SetLabelFont(43); // Absolute font size in pixel (precision 3)
+  histRatio->GetYaxis()->SetLabelSize(15);
+  histRatio->GetYaxis()->SetRangeUser( 0.5, 2.0);
+ 
+  // X axis ratio plot settings
+  histRatio->GetXaxis()->SetTitle(pb->getxtitle());
+  histRatio->GetXaxis()->SetTitleSize(25);
+  histRatio->GetXaxis()->SetTitleFont(43);
+  histRatio->GetXaxis()->SetTitleOffset(4);
+  histRatio->GetXaxis()->SetLabelFont(43); // Absolute font size in pixel (precision 3)
+  histRatio->GetXaxis()->SetLabelSize(15);
+
+  // And finally, a line at x = 1
+  // NB: the x and y coords are for the axis
+  TLine* unity = new TLine( 0.0, 1.0, 0.045, 1.0);
+  unity->SetLineStyle( kDashed);
+  unity->Draw("same");
+  
+  if (pb->logy) 
+    canRatio->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegionString()+"_"+pb->getyear()+"_Ratio_logy.png").c_str());
+  else
+    canRatio->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegionString()+"_"+pb->getyear()+"_Ratio.png").c_str());
+  
+  // change back to main Canvas before leaving
+  canRatio->SaveAs("temp.C");
+  canMain->cd(); 
 }
 
 void makeRatioPlot( TH1F* histRatio, PlotBus* pb,
@@ -206,6 +291,14 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
 
   if (pb->drawLegend)
     legend->Draw();
+  
+  if (pb->doRatioDataMC || pb->doRatioMCData) {
+    if (pb->plotDataSR && pb->stack)
+      makeMyRatio( pb, stack, hists["data"], can);
+    else
+      std::cout << ">>> ERROR: Can't make ratio unless you plot stack and data" << std::endl;
+  }
+  
 
   if (pb->logy) 
     can->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegionString()+"_"+pb->getyear()+"_logy.png").c_str());
