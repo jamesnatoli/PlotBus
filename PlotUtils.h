@@ -36,15 +36,33 @@ void makeRatioPlot( TH1F* histRatio, PlotBus* pb,
   histRatio->SetStats(true);
   histRatio->SetMarkerColor(1);
   histRatio->GetXaxis()->SetTitle("Inv. W boson mass [GeV]");
-  // histRatio->GetXaxis()->SetRangeUser( lowfitbin, highfitbin);
   histRatio->GetYaxis()->SetTitle( yTitle.c_str());
-  histRatio->GetYaxis()->SetRangeUser( -0.5, 1);
-  // histRatio->GetYaxis()->SetRangeUser( 0.0, 0.5);
+  if (!pb->autoRatioLimits)
+    histRatio->GetYaxis()->SetRangeUser( pb->ratioLow, pb->ratioHigh);
   histRatio->SetTitle( plotTitle.c_str());
   histRatio->Draw("E1");
   
   can->SaveAs((pb->filepath + "/QCD_normailzation_" + pb->filename + "_" + pb->getyear()  + ".png").c_str());
+  if (pb->saveHists)
+    can->SaveAs( ("histMacros/QCD_normailzation_" + pb->filename + "_" + pb->getyear()  + ".C").c_str());
 };
+
+// Helper function to sort the stack if plotting logy
+// https://root-forum.cern.ch/t/thstack-using-drawing-in-wrong-order-for-log-scale/27076/10
+THStack* sortStack( TList* hists) {
+  THStack* stack = new THStack("MC", "MC");
+  std::vector<TH1*> histsorter;
+  for (auto hist : *hists)
+    histsorter.push_back( (TH1 *)hist);
+
+  std::sort( histsorter.begin(), histsorter.end(),
+	    [](TH1 *a, TH1 *b) { return a->Integral() < b->Integral(); });
+
+  for (auto &hist : histsorter)
+    stack->Add( hist);
+  
+  return stack;
+}
 
 // Figure out which element is the tallest and draw it, such that the scaling is correct
 void drawTallest( TList* thingsToDraw, PlotBus* pb) {
@@ -89,9 +107,9 @@ void drawTallest( TList* thingsToDraw, PlotBus* pb) {
     ((TH1F*)tallest)->GetYaxis()->SetTitle("Events");
     if (pb->verbosity > 1)
       std::cout << ">>> Setting Maximum (TH1F) to " << (maxheight*scaleAxis) << std::endl;
-    ((TH1F*)tallest)->GetYaxis()->SetRangeUser(0, (maxheight*scaleAxis)); // account for error bars
+    ((TH1F*)tallest)->GetYaxis()->SetRangeUser( 0.0, (maxheight*scaleAxis)); // account for error bars
     if (pb->logy)
-      ((TH1F*)tallest)->GetYaxis()->SetRangeUser(0.01, (maxheight*scaleAxis));
+      ((TH1F*)tallest)->GetYaxis()->SetRangeUser( 0.01, (maxheight*scaleAxis));
     if (pb->DeepTauBinLabels)
       manualbinlabels( (TH1F*)tallest);
   } else if (tallest->IsA() == TClass::GetClass("THStack")) {
@@ -133,7 +151,7 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
       if ( std::find( pb->procsToStack.begin(), pb->procsToStack.end(), hist.first) != pb->procsToStack.end()) {
 	hist.second->SetLineColor( kBlack);
 	if (pb->verbosity > 1)
-	  std::cout << ">>> Stacking: " << hist.first << std::endl;
+	  std::cout << ">>> Stacking: " << hist.first << " (" << hist.second->Integral() << ")" << std::endl;
 	stack->Add( hist.second);
       } else if ((pb->plotData) && (hist.first == "data")) {
 	thingsToDraw->Add( hist.second);      
@@ -148,8 +166,11 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
     }
   } // for (auto hist& : ...
 
-  if (pb->stack)
+  if (pb->stack) {
+    if (pb->logy)
+      stack = sortStack( stack->GetHists());
     thingsToDraw->Add( stack);
+  }
   
   // Draw the tallest, now we can do whatever order we want
   drawTallest( thingsToDraw, pb);
@@ -200,6 +221,11 @@ void makePlot( std::map<std::string, TH1F*> hists, PlotBus* pb) {
       (hist.second)->SaveAs( TString( "histMacros/" + pb->filename + "_" + hist.first  + ".C"));
     }
   }
+
+  // Random option
+  if (pb->getBinSig)
+    signalSignifigance( hists["signal"], stack, pb);
+  
 }
 
 // Is this smart?
@@ -209,186 +235,4 @@ void makeRegionPlot( std::map<std::string, TH1F*> hists, PlotBus* pb, std::strin
     pb->title = pb->getRegionTitle();
   makePlot( hists, pb);
 }
-
-/*
-void makePlot(TH1F* signalhist, TH1F* datahist, std::map<std::string, TH1F*> bkghists, std::vector<std::string> bkgs, PlotBus* pb) {
-  std::map<std::string, std::vector<std::string>> yields;
-  TCanvas *can = new TCanvas( pb->getfilename(), pb->getfilename(), 600, 600);
-  TList *thingsToDraw = new TList();
-  can->SetLeftMargin(0.14); // 0.1 -> 0.14
-  can->SetRightMargin(0.06); // 0.1 -> 0.06
-  can->cd();
-  can->SetLogy( pb->logy);
-  THStack *stack = new THStack("MC","MC");
-  TLegend *legend = new TLegend(0.6,0.7,0.94,0.9);
-
-  // Signal
-  std::stringstream integSignal;
-  // integSignal << std::fixed << std::setprecision(2) << signalhist->Integral(0, signalhist->GetNbinsX()+1);
-  integSignal << std::fixed << std::setprecision(2) << signalhist->GetSumOfWeights();
-  std::vector<std::string> vec{ integSignal.str(), to_string( (int)signalhist->GetEntries())};
-  yields["Signal"] = vec;
-  legend->AddEntry( signalhist,("W->3#pi, B=10^-"+pb->getSignalScale()+" ("+integSignal.str()+")").c_str(),"l");
-  signalhist->SetLineColor(kBlue);
-  signalhist->SetLineWidth(2);
-  signalhist->SetMarkerStyle(0);
-  signalhist->SetFillStyle(0);
-  signalhist->SetStats(false);
-  
-  // Data
-  if (datahist) {
-    std::stringstream integData;
-    integData << std::fixed << std::setprecision(2) << datahist->Integral(0, datahist->GetNbinsX()+1);
-    std::vector<std::string> vec{ integData.str(), to_string( (int)datahist->GetEntries())};
-    yields["Data"] = vec;
-    legend->AddEntry( datahist,("Data ("+integData.str()+")").c_str(),"lep");
-    datahist->SetMarkerStyle(8);
-    datahist->SetMarkerSize(0.8);
-    datahist->SetStats(false);
-  }
-
-  // Backgrounds
-  for(std::string bkg : bkgs){
-    // bkghists[bkg]->SetFillColor(colors[bkg]);
-    // bkghists[bkg]->SetStats(false);
-    std::stringstream integ;
-    integ << std::fixed << std::setprecision(2) << bkghists[bkg]->Integral(0, bkghists[bkg]->GetNbinsX()+1);
-    std::vector<std::string> vec{ integ.str(), to_string( (int)bkghists[bkg]->GetEntries())};
-    yields[bkg] = vec;
-    // Only display the ones we want...
-    if (std::find( pb->bkgsToPlot.begin(), pb->bkgsToPlot.end(), bkg) != pb->bkgsToPlot.end()) {
-      stack->Add(bkghists[bkg]);
-      legend->AddEntry( bkghists[bkg],(bkg+" ("+integ.str()+")").c_str(),"f");
-    }
-  }
-
-  printYields( yields);
-
-  thingsToDraw->Add( stack);
-  if (pb->plotData)
-    thingsToDraw->Add( datahist);
-  if (pb->plotSignal)
-    thingsToDraw->Add( signalhist);
-
-  // Draw the tallest, then we can do whatever order we want
-  drawTallest( thingsToDraw, pb);
-  stack->Draw("HIST SAME");
-  if (pb->plotSignal)
-    signalhist->Draw("HIST SAME");
-  if (pb->plotData)
-    datahist->Draw("E1 SAME");
-  
-  legend->Draw();
-  if (pb->logy) 
-    can->SaveAs(TString(pb->filepath + pb->filename+"_"+pb->getyear()+"_logy.png"));
-  else
-    can->SaveAs(TString(pb->filepath + pb->filename+"_"+pb->getyear()+".png"));
-
-  if (pb->saveHists) {
-    std::cout << "Saving histograms as .C files..." << std::endl;
-    signalhist->SaveAs( TString( "histMacros/"+pb->filename+"_signalhist.C"));
-    if (pb->plotData)
-      datahist->SaveAs( TString( "histMacros/"+pb->filename+"_datahist.C"));
-    stack->SaveAs( TString( "histMacros/"+pb->filename+"_stack_mine.C"));
-  }
-}
-
-// I don't really need this... I can do this using my big one I think
-void makeRegionPlot( string region, TH1F* datahist, TH1F* signalhist, map<string, TH1F*> bkghists, vector<string> bkgs, PlotBus* pb){
-  std::map<std::string, std::vector<std::string>> yields;
-  TList *thingsToDraw = new TList();
-  TCanvas *can = new TCanvas(("Region "+region).c_str(), ("Region "+region).c_str(), 600, 600);
-  can->SetLeftMargin(0.14); // 0.1 -> 0.14
-  can->SetRightMargin(0.06); // 0.1 -> 0.06
-  can->cd();
-  THStack *stack = new THStack("MC","MC");
-  THStack *stack_est = (THStack*)stack->Clone("EST");
-  THStack *stack_estBins = (THStack*)stack->Clone("EST Bins");
-  
-  TLegend *legend = new TLegend(0.6,0.7,0.94,0.9);
-  pb->title = pb->RegionTitles[region];
-  if (pb->chargereq == 3) {
-    if (region == "A")
-      pb->title = "|Q|=3 Fully Isolated Region";
-    else
-      pb->title += "|Q|=3";
-  }
-
-  if (pb->plotDataSR)
-    getYieldsAndEntries( datahist, signalhist, bkghists, legend, pb, region);
-  else
-    getYieldsAndEntries( NULL, signalhist, bkghists, legend, pb, region);
-  
-  // Backgrounds
-  for (string bkg : bkgs){
-    // Only plot the ones we want
-    if (std::find( pb->bkgsToPlot.begin(), pb->bkgsToPlot.end(), bkg) != pb->bkgsToPlot.end()) {
-      bkghists[bkg+"_"+region]->SetFillColor(colors[bkg]);
-      bkghists[bkg+"_"+region]->SetStats(false);
-      stack->Add(bkghists[bkg+"_"+region]);
-      if (bkg != "QCD MC") {
-	stack_est->Add( (TH1F*)bkghists[bkg+"_"+region]);
-	stack_estBins->Add( (TH1F*)bkghists[bkg+"_"+region]);
-      } // if (bkg != ...
-    } // if (std::find ...
-  } // for (string bkg : ...
-  
-  // Make our TList of things to plot...
-  thingsToDraw->Add( signalhist);
-  thingsToDraw->Add( stack);
-  if (region == "A") { // Take care of QCD
-    bkghists["QCD Est Bins"]->SetLineColor( colors["QCD Est Bins"]);
-    bkghists["QCD Est Bins"]->SetLineWidth(2);
-    bkghists["QCD Est Bins"]->SetFillColor( 0);
-    bkghists["QCD Est Bins"]->SetStats(false);
-
-    bkghists["QCD Estimation"]->SetLineColor( colors["QCD Estimation"]);
-    bkghists["QCD Estimation"]->SetLineWidth(2);
-    bkghists["QCD Estimation"]->SetFillColor( 0);
-    bkghists["QCD Estimation"]->SetStats(false);
-    stack_est->Add( bkghists["QCD Estimation"]);
-    stack_estBins->Add( bkghists["QCD Est Bins"]);
-    
-    thingsToDraw->Add( stack_est);
-    thingsToDraw->Add( stack_estBins);
-
-    if (pb->plotDataSR)
-      thingsToDraw->Add( datahist);
-  } else {
-    thingsToDraw->Add( datahist);
-  }
-  
-  // Draw the tallest, now we can do whatever order we want
-  drawTallest( thingsToDraw, pb);
-  stack->Draw("HIST SAME");
-
-  // Data (not in SR (unless I say so))
-  if (((region != "A") || pb->plotDataSR) && pb->plotData) { 
-    datahist->SetMarkerStyle(8);
-    datahist->SetMarkerSize(0.8);
-    datahist->SetStats(false);
-    datahist->Draw("E1SAME");
-  }
-
-  // QCD Estimate (only A)
-  if (region == "A") { 
-    stack_est->Draw("HIST SAME");
-    stack_estBins->Draw("HIST SAME");
-  }
-
-  // Signal
-  if (pb->plotSignal) {
-    signalhist->SetLineColor(kBlue);
-    signalhist->SetLineWidth(2);
-    signalhist->SetLineStyle(kDashed);
-    signalhist->SetMarkerStyle(0);
-    signalhist->SetFillStyle(0);
-    signalhist->SetStats(false);
-    signalhist->Draw("HIST SAME");
-  }
-  
-  legend->Draw();
-  can->SaveAs(( pb->filepath + "/QCD_region_"+region+"_"+pb->filename+"_"+pb->getyear()+".png").c_str());
-}
-*/
 #endif
