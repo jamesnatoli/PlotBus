@@ -93,7 +93,8 @@ void makeMyRatio( PlotBus* pb, THStack* st, TH1* dh, TCanvas* canMain) {
 
   // And finally, a line at x = 1
   // NB: the x and y coords are for the axis
-  TLine* unity = new TLine( 0.0, 1.0, 0.045, 1.0);
+  double rend = histRatio->GetBinLowEdge( histRatio->GetNbinsX()+1);
+  TLine* unity = new TLine( 0.0, 1.0, rend, 1.0);
   unity->SetLineStyle( kDashed);
   unity->Draw("same");
   
