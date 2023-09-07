@@ -104,7 +104,8 @@ void makeMyRatio( PlotBus* pb, THStack* st, TH1* dh, TCanvas* canMain) {
     canRatio->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegionString()+"_"+pb->getyear()+"_Ratio.png").c_str());
   
   // change back to main Canvas before leaving
-  canRatio->SaveAs("temp.C");
+  if (pb->saveHists)
+    canRatio->SaveAs(( pb->filepath + "/QuickPlot_"+pb->filename+pb->getRegionString()+"_"+pb->getyear()+"_Ratio.C").c_str());
   canMain->cd(); 
 }
 
