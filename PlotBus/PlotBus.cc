@@ -1,4 +1,4 @@
-// Function implementations for PlotBus
+// class to store plotting information and pass it to TryPlot.cc
 #ifndef PLOT_BUS_CC
 #define PLOT_BUS_CC
 
@@ -7,24 +7,43 @@
 #include "PlotBus.h"
 
 // Simpler Constructor
-PlotBus::PlotBus( std::string year) {
-  if (setupYear(year)) {
-    Init();
+PlotBus::PlotBus( int year, std::string VFP="") {
+  PlotBus::year = year;
+  std::string ys = std::to_string(year);
+  if (year == 2016) {
+    PlotBus::era = "Wto3pi_" + ys + "_" + VFP + "_fromstep1";
+    PlotBus::channel = "Wto3pi_" + ys + VFP;
   } else {
-    std::cout << "ERROR: " << year << " is not a valid year!";
-    throw;
+    PlotBus::era = "Wto3pi_" + ys + "_fromstep1";
+    PlotBus::channel = "Wto3pi_" + ys;
   }
+  Init( VFP);
 }
 
 // Constructor takes era as parameter
-PlotBus::PlotBus( std::string era, std::string channel, std::string year) {
+PlotBus::PlotBus( std::string era, std::string channel, int year, std::string VFP="") {
   PlotBus::era = era;
   PlotBus::channel = channel;
   PlotBus::year = year;
-  Init();
+  Init( VFP);
 }
 
-void PlotBus::Init() {
+void PlotBus::Init( std::string VFP) {
+
+  if (year == 2016) {
+    if (VFP == "postVFP")
+      PlotBus::postVFP = true;
+    else if (VFP == "preVFP")
+      PlotBus::preVFP = true;
+    else {
+      std::cout << "Not preVFP or postVFP!!!" << std::endl;
+      throw;
+    }
+  } else if (VFP !=  "") {
+    std::cout << "No " << VFP << " option for " << year << "!!!" << std::endl;
+    throw;
+  }
+  
   // These are sort of defaults... can be overwritten
   PlotBus::dataTakingEras = {};
   files = {};
@@ -32,7 +51,6 @@ void PlotBus::Init() {
   dataName = "Observed";
   bkgsToPlot = {"QCD", "DY", "TT", "VV"};
   processes = {"QCD", "DY", "DY10", "ST", "TT", "ttV", "VV", "VVV", "W+Jets"};
-  datachain = new TChain("Events");
 
   mergeSamples    = true;
   mergeSignals    = false;
@@ -52,7 +70,7 @@ void PlotBus::Init() {
 		    }
   };
 
-  if (mergeSignals) {
+  if ((year == 2016) && (mergeSignals)) {
     samplesToMerge["WJetsTo3Pi"] =
       { "WJetsTo3Pi_0J",
 	"WJetsTo3Pi_1J",
@@ -63,7 +81,6 @@ void PlotBus::Init() {
     
   procsToStack = {};
   signalsToStack = {};
-  canvasTags = {};
   bkgsParts = {{"DY10", "DY"}};
   prefix = "~/KState/Research/Wto3pi/ROOT/skims/";
   filepath = "plots_" + era + "/";
@@ -89,8 +106,6 @@ void PlotBus::Init() {
   // Default Options
   logy              = false;
   logandlin         = false;
-  histErrors        = true;
-  justDraw          = false;
   saveHists         = false;
   saveCanvas        = false;
   plotData          = true;
@@ -134,11 +149,10 @@ void PlotBus::Init() {
 
   // Probably a better way to do this...?
   SRcut1_scale = "(PionTriplet_pion3_iso < 0.1)";
-  // SRcut1_scale = "( (Tau_decayMode[Lepton_tauIdx[PionTriplet_FSpions1]] == 0) || (Tau_decayMode[Lepton_tauIdx[PionTriplet_FSpions2]] == 0) )";
   SRcut2_shape = "(PionTriplet_LowestDeepTauVsJet >= 15)";
 
   Wpt = 40;
-  MaxdR = 6.0;
+  MaxdR = 4.0;
 
   // Impact Parameters
   Dxy = 1.0; // these are extremely loose
@@ -147,29 +161,13 @@ void PlotBus::Init() {
   bjetVeto = false;
     
   SignalScale = 6;
-  eventCuts   = "Trigger_ditau && METfilters && !LeptonVeto";
+  eventCuts   = "Trigger_ditau && !LeptonVeto";
   // TriggerMatching is broken in 2018D... not really necessary anyways
   // tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack) && PionTriplet_TriggerMatched";
   tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack)";
   
   tripletCuts+= " && (min( min( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) > 0.3)";
 } // END INIT
-
-bool PlotBus::setupYear( std::string year) {
-  if ((year == "2016_preVFP") || (year == "2016_postVFP") || (year == "2017") || (year == "2018")) {
-    PlotBus::year = year;
-    PlotBus::era = "Wto3pi_" + year + "_fromstep1";
-    
-    // Wow, this is annoying
-    if ((year == "2016_preVFP") || (year == "2016_postVFP"))
-      PlotBus::channel = (year.find("postVFP") != std::string::npos) ? "Wto3pi_2016postVFP" : "Wto3pi_2016preVFP";
-    else
-      PlotBus::channel = "Wto3pi_" + year;
-    return true;
-  } else {
-    return false;
-  }
-}
 
 bool PlotBus::isSignal( std::string objname) {
   return (std::find( signals.begin(), signals.end(), objname) != signals.end());
@@ -199,24 +197,14 @@ const char* PlotBus::getxtitle() {
     return xtitle.c_str();
 }
 
-std::string PlotBus::getDeepTauVsEl(bool invert) {
-  if (invert)
-    return ("!(PionTriplet_LowestDeepTauVsEl >= "+std::to_string(deepTauVsEl)+")").c_str();
-  else
-    return ("(PionTriplet_LowestDeepTauVsEl >= "+std::to_string(deepTauVsEl)+")").c_str();
-  
+std::string PlotBus::getDeepTauVsEl() {
+  return ("(PionTriplet_LowestDeepTauVsEl >= "+std::to_string(deepTauVsEl)+")").c_str();
 };
-std::string PlotBus::getDeepTauVsMu(bool invert) {
-  if (invert)
-    return ("!(PionTriplet_LowestDeepTauVsMu >= "+std::to_string(deepTauVsMu)+")").c_str();
-  else
-    return ("(PionTriplet_LowestDeepTauVsMu >= "+std::to_string(deepTauVsMu)+")").c_str();
+std::string PlotBus::getDeepTauVsMu() {
+  return ("(PionTriplet_LowestDeepTauVsMu >= "+std::to_string(deepTauVsMu)+")").c_str();
 };
-std::string PlotBus::getDeepTauVsJet(bool invert) {
-  if (invert)
-    return ("!(PionTriplet_LowestDeepTauVsJet >= "+std::to_string(deepTauVsJet)+")").c_str();
-  else
-    return ("(PionTriplet_LowestDeepTauVsJet >= "+std::to_string(deepTauVsJet)+")").c_str();
+std::string PlotBus::getDeepTauVsJet() {
+  return ("(PionTriplet_LowestDeepTauVsJet >= "+std::to_string(deepTauVsJet)+")").c_str();
 };
 std::string PlotBus::getDeepTauString() {
   return (PlotBus::getDeepTauVsEl() + " && " +
@@ -224,45 +212,41 @@ std::string PlotBus::getDeepTauString() {
 	  PlotBus::getDeepTauVsJet());
 };
 
-std::string PlotBus::getWptString(bool invert) {
-  if (invert)
-    return "!(PionTriplet_pt > " + std::to_string(Wpt) + ")";
-  else
-    return "(PionTriplet_pt > " + std::to_string(Wpt) + ")";
+std::string PlotBus::getWptString() {
+  return "(PionTriplet_pt > " + std::to_string(Wpt) + ")";
 }
 
-std::string PlotBus::getMaxdRString(bool invert) {
-  if (MaxdR == 0) {
+std::string PlotBus::getMaxdRString() {
+  if (MaxdR == 0)
     return "(max( max( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) > -1)";
-  } else {
-    if (invert)
-      return "!(max( max( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) < " + std::to_string(MaxdR) +")";
-    else
-      return "(max( max( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) < " + std::to_string(MaxdR) +")";
-  }
+  else
+    return "(max( max( PionTriplet_dR_12, PionTriplet_dR_13), PionTriplet_dR_23) < " + std::to_string(MaxdR) +")";
 }
 
-std::string PlotBus::getDxyString(bool invert) {
-  if (Dxy == 0) {
+std::string PlotBus::getDxyString() {
+  if (Dxy == 0)
     return ("(max(max(abs(PionTriplet_pion1_dxy), abs(PionTriplet_pion2_dxy)), abs(PionTriplet_pion3_dxy)) > -1)");
-  } else {
-    if (invert)
-      return ("!(max(max(abs(PionTriplet_pion1_dxy), abs(PionTriplet_pion2_dxy)), abs(PionTriplet_pion3_dxy)) < " + std::to_string(Dxy) + ")");
-    else 
-      return ("(max(max(abs(PionTriplet_pion1_dxy), abs(PionTriplet_pion2_dxy)), abs(PionTriplet_pion3_dxy)) < " + std::to_string(Dxy) + ")");
-  }
+    // return ("(abs(PionTriplet_pion1_dxy) > -1) && (abs(PionTriplet_pion2_dxy) > -1) && (abs(PionTriplet_pion3_dxy) > -1)");
+  else
+    return ("(max(max(abs(PionTriplet_pion1_dxy), abs(PionTriplet_pion2_dxy)), abs(PionTriplet_pion3_dxy)) < " + std::to_string(Dxy) + ")");
+    /*
+      return ("(abs(PionTriplet_pion1_dxy) < " + std::to_string(Dxy) + ") && " +
+      "(abs(PionTriplet_pion2_dxy) < " + std::to_string(Dxy) + ") && " +
+      "(abs(PionTriplet_pion3_dxy) < " + std::to_string(Dxy) + ")");
+    */
 }
 
-std::string PlotBus::getDzString(bool invert) {
-  if (Dz == 0) {
+std::string PlotBus::getDzString() {
+  if (Dz == 0)
     return ("(max(max(abs(PionTriplet_pion1_dz), abs(PionTriplet_pion2_dz)), abs(PionTriplet_pion3_dz)) > -1)");
-  } else {
-    if (invert)
-      return ("!(max(max(abs(PionTriplet_pion1_dz), abs(PionTriplet_pion2_dz)), abs(PionTriplet_pion3_dz)) < " + std::to_string(Dz) + ")");
-    else
-      return ("(max(max(abs(PionTriplet_pion1_dz), abs(PionTriplet_pion2_dz)), abs(PionTriplet_pion3_dz)) < " + std::to_string(Dz) + ")");
-  }
-  
+  // return ("(abs(PionTriplet_pion1_dz) > -1) && (abs(PionTriplet_pion2_dz) > -1) && (abs(PionTriplet_pion3_dz) > -1)");
+  else
+    return ("(max(max(abs(PionTriplet_pion1_dz), abs(PionTriplet_pion2_dz)), abs(PionTriplet_pion3_dz)) < " + std::to_string(Dz) + ")");
+  /*
+    return ("(abs(PionTriplet_pion1_dz) < " + std::to_string(Dz) + ") && " +
+    "(abs(PionTriplet_pion2_dz) < " + std::to_string(Dz) + ") && " +
+    "(abs(PionTriplet_pion3_dz) < " + std::to_string(Dz) + ")");
+  */
 }
 
 std::string PlotBus::getBjetVetoString() {
@@ -340,18 +324,32 @@ std::string PlotBus::getSelectionCut() {
 };
 
 // Overloaded for passing region information
-// I feel like there's got to be a better way to do this...
 std::string PlotBus::getSelectionCut( std::string extras) {
-  return ("(PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, " +
-	  PlotBus::getChargeReqString() + " && " +
-	  PlotBus::getTripletCuts() + " && " +
-	  PlotBus::getWptString() + " && " +
-	  PlotBus::getMaxdRString() + " && " + 
-	  PlotBus::getDeepTauString() + " && " +
-	  PlotBus::getIsoTrackIsoString() + " && " +
-	  PlotBus::getDxyString() + " && " + 
-	  PlotBus::getDzString() + " && " + 
-	  extras + PlotBus::getAddCuts() + "))");
+  if (addCuts == "")
+    return ("(PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, " +
+	    PlotBus::getChargeReqString() + " && " +
+	    PlotBus::getTripletCuts() + " && " +
+	    PlotBus::getWptString() + " && " +
+	    PlotBus::getMaxdRString() + " && " + 
+	    PlotBus::getDeepTauString() + " && " +
+	    PlotBus::getIsoTrackIsoString() + " && " +
+	    PlotBus::getDxyString() + " && " + 
+	    PlotBus::getDzString() + " && " + 
+	    extras + 
+	    "))");
+  else
+    return ("(PionTriplet_CountOfItsKind == MinIf$(PionTriplet_CountOfItsKind, " +
+	    PlotBus::getChargeReqString() + " && " +
+	    PlotBus::getTripletCuts() + " && " +
+	    PlotBus::getWptString() + " && " +
+	    PlotBus::getMaxdRString() + " && " + 
+	    PlotBus::getDeepTauString() + " && " +
+	    PlotBus::getIsoTrackIsoString() + " && " +
+	    PlotBus::getDxyString() + " && " + 
+	    PlotBus::getDzString() + " && " + 
+	    extras + " && " +
+	    PlotBus::getAddCuts() + 
+	    "))");
 };
 
 std::string PlotBus::getStdCutString() {
@@ -384,12 +382,18 @@ std::string PlotBus::getStdCutString( std::string extras) {
 };
 
 std::string PlotBus::getFullCutString() {
-    return (PlotBus::getStdCutString() + PlotBus::getAddCuts());
+  if (addCuts == "")
+    return PlotBus::getStdCutString();
+  else
+    return (PlotBus::getStdCutString() + " && " + PlotBus::getAddCuts());
 };
 
 // Overloaded for passing region information
 std::string PlotBus::getFullCutString( std::string extras) {
-    return (PlotBus::getStdCutString(extras) + PlotBus::getAddCuts());
+  if (addCuts == "")
+    return PlotBus::getStdCutString(extras);
+  else
+    return (PlotBus::getStdCutString(extras) + " && " + PlotBus::getAddCuts());
 };
 
 std::string PlotBus::getCutString( std::string process, std::string region="") {
@@ -432,7 +436,6 @@ std::string PlotBus::getCutStringSig( std::string process) {
   return ("(" + PlotBus::getSignalWeight( process) + ") * (" + PlotBus::getFullCutString() + ")");
 };
 
-// TODO: Make this work for different named regions?? wow
 std::string PlotBus::getRegionCut( std::string region) {
   if (region == "A")
     return getRegionCutsA();
@@ -450,7 +453,10 @@ std::string PlotBus::getRegionCut( std::string region) {
 }
 
 std::string PlotBus::getRegionTitle() {
-  return RegionTitles[currentRegion];
+  if (chargereq == 1)
+    return RegionTitles[currentRegion];
+  else
+    return ValRegionTitles[currentRegion];
 }
 
 std::string PlotBus::getRegionCutData( std::string region) {
@@ -473,16 +479,26 @@ std::string PlotBus::getBinning() {
   return "("+std::to_string(nbins)+","+std::to_string(lowbin)+","+std::to_string(highbin)+")";
 }
 
-std::string PlotBus::getDrawString( std::string proc, std::string reg, bool printerMode) {
+// will this work if I don't save the histograms?
+// std::string PlotBus::getBinning( double* bins) {
+//   std::vector<TH1F*> binhists;
+//   int counter = 0;
+//   for (auto proc : processes) {
+//     for (auto reg : { "A", "B", "C", "D" }) {
+//       binhists.push_back( new TH1F( ("proc" + proc + reg).c_str(), "", bins));
+//       binhists[counter++]->Draw();
+//     }
+//   }
+//   return "";
+// }
+
+std::string PlotBus::getDrawString( std::string proc, std::string reg) {
   if (manualBins) { // requires the "+" sign
-    TH1F* temp;
-    if (!printerMode) {
-      temp = new TH1F( (proc + reg + year).c_str(), proc.c_str(), bins.size()-1, &bins[0]);
-      temp->Draw();
-    }
-    return (variable + ">>+" + proc + reg + year);
+    TH1F* temp = new TH1F( ("proc" + proc + reg).c_str(), "", bins.size()-1, &bins[0]);
+    temp->Draw();
+    return (variable + ">>+proc" + proc + reg);
   } else {
-    return (variable + ">>" + proc + reg + year + PlotBus::getBinning());
+    return (variable + ">>proc" + proc + reg + PlotBus::getBinning());
   }
 }
 
@@ -490,13 +506,6 @@ std::string PlotBus::getDrawString( std::string proc, std::string reg, bool prin
 void PlotBus::SetBins( std::vector<double> b) {
   manualBins = true;
   bins = b;
-}
-
-void PlotBus::AddCuts( std::string cut) {
-  if (addCuts == "")
-    addCuts += "(1) * (" + cut + ")";
-  else
-    addCuts += " * (" + cut + ")";
 }
 
 void PlotBus::NoSignalRegion() {
@@ -513,8 +522,7 @@ void PlotBus::MuonControlRegion() {
   if (!ControlRegion) {
     std::cout << ">> Using MUON CONTROL REGION" << std::endl;
     this->UseFullSamples();
-
-    doRatioDataMC = true;
+    
     ControlRegion = true;
     plotData      = true;
     plotDataSR    = true;
@@ -545,20 +553,17 @@ void PlotBus::MuonControlRegion() {
 
 void PlotBus::QCDControlRegion() {
   if (!ControlRegion) {
+    ControlRegion = true;
     std::cout << ">> Using QCD CONTROL REGION" << std::endl;
     processes   =  {"QCD", "DY", "DY10", "ST", "TT", "ttV", "VV", "VVV"};
-    ControlRegion = true;
-    doRatioDataMC = true;
-    qcdInfo       = true;
-    doChi2        = true;
-    plotData      = true;
-    plotDataSR    = true;
-    plotSignal    = true;
+    plotData    = true;
+    plotDataSR  = true;
+    plotSignal  = true;
+    // tripletCuts = "(abs(PionTriplet_pdgId) == 15*15*15) && (PionTriplet_trailingIsTrack)";
+    // deepTauVsJet = 31;
     chargereq = 3;
-    Wpt = 0;
-    // AddCuts( "PionTriplet_pt < 40");
-
-    RegionTitles = ValRegionTitles;
+    
+    title    += " QCD CR";
     filename += "_qcdCR";
     if (verbosity >= 0) {
       std::cout << "\nIn the QCD control region... " << std::endl
@@ -571,21 +576,20 @@ void PlotBus::QCDControlRegion() {
     std::cout << ">> Control region already set... BE CAREFUL" << std::endl;
 };
 
-// void PlotBus::SetSignalChain( TObject* chain) {
-//   signalchain = (TChain*)chain;
-// };
-
-void PlotBus::SetDataChain( ) {
-  // Used for QCD!!!
-  for (std::string file : datafiles)
-    datachain->Add((file).c_str());
+void PlotBus::SetSignalChain( TObject* chain) {
+  signalchain = (TChain*)chain;
 };
+
+// void PlotBus::SetDataChain( TChain* chain) {
+//   datachain = chain;
+// };
 
 void PlotBus::UseFullSamples( std::string s) {
   if (s != "")
     prefix = s;
   else
     prefix = "/Volumes/WineCellar/KState/analysis/";
+    
 }
 
 void PlotBus::setPalette( int p=kBird) {
@@ -637,11 +641,11 @@ void PlotBus::MergeFiles() {
 }
 
 // Merge samples, but smartly :)
-int PlotBus::MergeSamples( std::map<std::string, TH1*> *phists) {
+int PlotBus::MergeSamples( std::map<std::string, TH1F*> *phists) {
   if (!mergeSamples)
     return 1;
   // dereference this once here...
-  std::map<std::string, TH1*> &hists = *phists;
+  std::map<std::string, TH1F*> &hists = *phists;
 
   // Do Things
   for (auto const& merger : samplesToMerge) {
@@ -651,7 +655,7 @@ int PlotBus::MergeSamples( std::map<std::string, TH1*> *phists) {
 	std::cout << ">>> Creating new process: " << merger.first << std::endl;
       // processes.push_back( merger.first);
       if (std::find( processes.begin(), processes.end(), merger.second[0]) != processes.end()) {
-	hists[merger.first] = (TH1F*)hists[merger.second[0]]->Clone(merger.first.c_str());
+	hists[merger.first] = (TH1F*)hists[merger.second[0]]->Clone();
 	hists[merger.first]->Reset();
       } else {
 	std::cout << ">>> !!!MERGE ERROR: Sample " << merger.second[0] << " did not exist... could not merge" << std::endl;

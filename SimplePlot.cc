@@ -1,53 +1,46 @@
-// #include "TROOT.h"
-#include "TFile.h"
-#include "TNtuple.h"
 #include "TCanvas.h"
 #include "TChain.h"
-#include "TH1.h"
-#include "THStack.h"
-#include "TLegend.h"
-#include "TF1.h"
-#include "TError.h"
+#include "TH1F.h"
 
 #include <iostream>
-#include <fstream>
-#include <sstream>
 #include <vector>
-#include <math.h>
-#include <assert.h> 
 #include <iomanip>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <omp.h>
 
-#include "Analyzers.h"
+#include "PlotBus.h"
 #include "PlotUtils.h"
-#include "PlotBus.cc"
-#include "doQCDestimation.cc"
 
-using namespace std;
-int SimplePlot( PlotBus* pb) {
-  // Options
-  int year        = pb->year;
-  int numbins     = pb->nbins;
-  double lowbin   = pb->lowbin;
-  double highbin  = pb->highbin;
-  string variable = pb->variable;
-  string filename = pb->filename;
-  bool logy       = pb->logy;
+// std::map<std::string, TH1*> PlotBus::SimplePlot() {
+void PlotBus::SimplePlot() {
+  if (variable == "") {
+    std::cout << "ERROR! You must plot a variable!" << std::endl;
+    throw;
+  }
   TCanvas *c1 = new TCanvas("c1", "c1");
-  pb->xtitle = variable;
   // gErrorIgnoreLevel = kWarning;
 
-  // should I do this in the constructor?
-  pb->FillFiles();
-  pb->MergeFiles();
-  map<string, vector<string>> files = pb->files;
+  FillFiles();
+  if (verbosity > 1) {
+    for (auto& f : files) {
+      std::cout << "--> " << f.first << std::endl;;
+      for (auto s : f.second)
+	std::cout << "\t" << s << std::endl;
+    }
+  }
 
+  // Create Chains
   std::cout << ">>> Making chain" << std::endl;
-  bool doQCD = false;
-  map<string, TChain> chain;
-  for(string proc : pb->processes){
+  std::map<std::string, TChain> chain;
+  SetDataChain();
+  
+  for(std::string proc : processes){
     if (proc != "QCD") {
       chain[proc].SetName("Events");
-      for(string file : pb->files[proc]){
+      for(std::string file : files[proc]){
 	chain[proc].Add((file).c_str());
       }
     } else {
@@ -55,53 +48,63 @@ int SimplePlot( PlotBus* pb) {
     }
   }
   
-  pb->datachain.SetName("Events");
-  for (string file : pb->datafiles)
-    (pb->datachain).Add((file).c_str());
-  
-  string binning = "("+to_string(numbins)+","+to_string(lowbin)+","+to_string(highbin)+")";
   std::cout << ">>> Plotting variable: " << variable
 	    << "\n" << std::endl;
 
-  // pb->UnsetSignalRegionVars();
+  if (verbosity > 0)
+    std::cout << getCutString( dataName, "A") << std::endl;
+  
   int icount = 0;
-  for(string proc : pb->processes){
-    icount++;
-    std::cout << ">>> "
-	      << setw(20) << left
-	      << proc+":" << icount << " / " << pb->processes.size()
-	      << std::endl;
-
+  // #pragma omp parallel for
+  for(std::string proc : processes){
+    std::cout << ">>> " << std::setw(20) << std::left << proc << std::endl;
     if (proc != "QCD") {
+      // #pragma omp parallel for
       for (std::string reg : {"A", "B", "C", "D"}) {
 	if ((reg == "A") || doQCD) {
-	  pb->UnsetSignalRegionVars();
-	  if (pb->verbosity > 0)
-	    std::cout << (pb->getCutString( proc, reg)).c_str() << std::endl;
-	  chain[proc].Draw((variable + ">>proc" + proc + reg + binning).c_str(), (pb->getCutString( proc, reg)).c_str());
+	  UnsetSignalRegionVars();
+	  if (verbosity > 1) {
+	    std::cout << ">> Drawing: " << (getDrawString( proc, reg, true)).c_str() << std::endl;
+	    std::cout << ">> Cutting: " << (getCutString( proc, reg)).c_str() << std::endl;
+	  }
+	  // TODO: write a PlotBus::Draw() function
+	  chain[proc].Draw( (getDrawString( proc, reg)).c_str(), (getCutString( proc, reg)).c_str());
 	}
       }
     }
   }
-  
+
+  // TODO: add a protection here, before QCD
+  // TODO: simplify this with a GetHist() function too...?
   std::cout << "\n>>> Getting histograms" << std::endl;
-  std::map<std::string, TH1F*> hists;
-  for (string proc : pb->processes) {
+  // std::map<std::string, TH1*> hists;
+  for (std::string proc : processes) {
     if (proc != "QCD") {
-      if (pb->verbosity > 1)
+      if (verbosity > 1)
 	std::cout << ">>> Getting: " << proc << std::endl;
-      if (proc != "data" || pb->plotDataSR)
-	hists[proc] = (TH1F*)gDirectory->Get(("proc"+proc+"A").c_str());
+      if ((proc != dataName) || plotDataSR) {
+	hists[proc] = dynamic_cast<TH1*>(gDirectory->Get((proc+"A"+year).c_str()));
+      }
+    } else {
+      // if I stored hists as a member of PlotBus I wouldn't need to return this
+      hists[proc] = doQCDestimation(); 
     }
-    else
-      hists[proc] = doQCDestimation( pb, binning);
   }
 
-  pb->MergeSamples( &hists);
-  std::cout << ">>> Making canvas" << std::endl;
-  makeRegionPlot( hists, pb, "A");
+  // Sanity Check
+  for (auto& proc : hists) {
+    if (!proc.second) {
+      std::cout << "!!! ERROR !!! Failed to draw " << proc.first << ", exiting" << std::endl;
+      throw;
+    }
+  }
+
+  MergeSamples( &hists);
+  if (!justDraw) {
+    std::cout << "\n>>> Making canvas" << std::endl;
+    makeRegionPlot( hists, this, "A");
+  }
   
-  return 0;
+  // return hists;
+  return;
 }
-
-
