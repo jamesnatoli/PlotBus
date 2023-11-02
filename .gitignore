@@ -5,3 +5,5 @@ bin/?*
 histMacros/.C*
 obj/
 runners/*
+punners/*
+histRatio.C

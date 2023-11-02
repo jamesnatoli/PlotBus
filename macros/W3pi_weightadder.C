@@ -244,7 +244,7 @@ Float_t IPweight(Float_t dxy1, Float_t dz1, Float_t dxy2, Float_t dz2, Float_t d
 
 void W3pi_weightadder(){
   std::cout << ">>> Opening W3pi_weightadder.C ... " << endl;
-  gROOT->ProcessLine( ".L W3pi_weightadder.C");
+  gROOT->ProcessLine( ".L macros/W3pi_weightadder.C");
 }
 
 #endif
