@@ -3,3 +3,5 @@ plots_*
 *.png
 bin/?*
 histMacros/.C*
+obj/
+runners/*
