@@ -11,9 +11,11 @@
 
 // C++ Includes
 #include <regex>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 #include <string>
-
-// Personal Includes
+#include <iomanip>
 
 class PlotBus {
 public:
@@ -26,8 +28,10 @@ public:
   // PlotBus( std::vector<std::string>);
   void Init(); // actually does most of the work
   bool setupYear(std::string);
+  bool setupYear(std::string, std::string, std::string);
   
   bool logy;
+  bool logz;
   bool logandlin;
   bool histErrors;
   bool justDraw;
@@ -38,65 +42,74 @@ public:
   bool saveCanvas;
   bool plotData;
   bool plotDataSR;
+  bool blindData;
   bool plotSignal;
   bool stitchSignal;
   bool stackSignal;
-  bool normalize;
   bool stack;
+  bool keepStackOrder;
   bool fillHists;
   bool fillSignal;
   bool usePalette;
   bool drawLegend;
   bool legendYield;
   bool doQCD;
+  bool useAllQCD;
   bool overflow;
   bool ControlRegion;
   bool qcdInfo;
   bool doChi2;
   bool DeepTauBinLabels;
   bool manualBins;
+  bool twoDimensional;
   bool getBinSig;
   bool autoRatioLimits;
   bool doRatioDataMC;
   bool doRatioMCData;
   bool doRatioDataSignal;
   bool doRatioSignalData;
-  
+
+  // Binning
   int nbins;
   double lowbin, highbin;
-  std::vector<double> bins;
   double ratioLow;
   double ratioHigh;
-  
+  std::vector<double> bins;
+  std::vector<double> bins2D;
+  std::vector<double> blindRegion;
+
+  // Plot aesthetics
   int verbosity;
-  bool preVFP;
-  bool postVFP;
+  int precision;
   Double_t Luminosity;
+  std::string normalize;
   std::string year;
   std::string era;
   std::string channel;
   std::string filename;
   std::string filepath;
+  std::string extfile;
   std::string prefix;
   std::string variable;
   std::string title;
   std::string xtitle;
   std::string ytitle;
-  std::string addCuts;
   std::string currentRegion;
-  std::string basicSelection;
   std::vector<std::string> canvasTags;
   std::map<std::string, std::string> RegionTitles;
   std::map<std::string, std::string> ValRegionTitles;
 
+  // Files
   std::vector<std::string> datafiles;
   std::vector<std::string> dataTakingEras;
   std::map<std::string, std::vector<std::string>> signalfiles;
   std::map<std::string, std::vector<std::string>> files;
   std::map<std::string, std::vector<std::string>> bkgfiles;
 
-  std::map<std::string, TH1*> hists; // important container...
-    
+  // Important Container
+  std::map<std::string, TH1*> hists;
+
+  // Cuts
   int chargereq;
   int deepTauVsEl;
   int deepTauVsMu;
@@ -109,15 +122,19 @@ public:
   bool bjetVeto;
   
   int SignalScale;
+  std::string addCuts;
+  std::string basicSelection;
   std::string manualCutString;
   std::string eventCuts;
   std::string tripletCuts;
   std::string dataWeight;
   std::string stdMCweight;
   std::string DxyDzWeight;
+  std::string TauSFweight;
   std::string qcdMCweight;
   std::string stitchMCweight;
   std::string stitchDY;
+  std::string stitchDY_LO;
   std::string stitchWJ;
   std::string stitchSig;
   std::string TTbar_NNLOweight;
@@ -129,36 +146,30 @@ public:
   std::string SRcut2_shape;
 
   std::string dataName;
-  std::vector<std::string> bkgsToPlot     = {};
-  std::vector<std::string> processes      = {};
-  std::vector<std::string> signals        = {};
-  std::vector<std::string> procsToStack   = {};
-  std::vector<std::string> signalsToStack = {};
-  std::vector<float>  analyzeCuts    = {};
+  std::vector<std::string> bkgsToPlot;
+  std::vector<std::string> processes;
+  std::vector<std::string> signals;
+  std::vector<std::string> procsToStack;
+  std::vector<std::string> signalsToStack;
+  std::vector<float> analyzeCuts;
 
   // Samples to Merge
   int colorIdx;
   int histFillStyle;
   int signalFillStyle;
   std::string drawingOptions;
-  std::map< std::string, std::string> bkgsParts = {};
-  std::map< std::string, std::vector<std::string>> samplesToMerge = {};
+  std::map< std::string, std::string> bkgsParts;
+  std::map< std::string, std::vector<std::string>> samplesToMerge;
   static std::map< std::string, int> colors; // defined in Colors.cc
-  std::map< std::string, int> paletteColors = {};
+  std::map< std::string, int> paletteColors;
 
   // Chains
   TChain* signalchain;
-  TChain* datachain;
-  TChain* processchain;
+  TChain* datachain; // need to be carefull with inheriting pointers
+  std::map<std::string, TChain*> processchain;
   // std::map< std::string, TChain> bkgchain;
 
   // Member Functions
-  // Getters in Colors.cc
-  int getColors( std::string);
-  int getHistFillStyle()     { return histFillStyle; };
-  int getSignalFillStyle()   { return signalFillStyle; };
-  const char* getSignalFill();
-  const char* getHistFill();
 
   // Getters
   bool isData(std::string);
@@ -166,19 +177,24 @@ public:
   bool isData(TObject*);
   bool isSignal(TObject*);
   const char* getxtitle();
-  const char* getvariable()    { return variable.c_str(); };
-  const char* getfilename()    { return filename.c_str(); };
-  const char* getfilepath()    { return filepath.c_str(); };
-  const char* gettitle()       { return title.c_str(); };
-  const char* getytitle()      { return ytitle.c_str(); };
-  const char* getDrawingOpts() { return drawingOptions.c_str(); };
-  const char* getAddCuts()     { return ( "&& " + addCuts).c_str(); };
-  virtual const char* getTopLabel()    { return ("UL"+getyear()+", "+getLumi().substr(0, 4)+" fb^{-1} (13 TeV)").c_str(); };
-  std::string getLumi()        { return std::to_string(Luminosity); };
-  virtual std::string getyear()        { return year; };
-  std::string getEventCuts()   { return eventCuts.c_str(); };
-  std::string getTripletCuts() { return tripletCuts.c_str(); };
-  std::string getSignalScale() { return std::to_string( SignalScale); };
+  const char* getvariable()       { return variable.c_str(); };
+  const char* getfilename()       { return filename.c_str(); };
+  const char* gettitle()          { return title.c_str(); };
+  const char* getytitle()         { return ytitle.c_str(); };
+  const char* getDrawingOpts()    { return drawingOptions.c_str(); };
+  std::string getfilepath()       { return (filepath + extfile); };
+  std::string getAddCuts()        { return (addCuts == "") ? (addCuts) : (" && " + addCuts); };
+  std::string getEventCuts()      { return eventCuts.c_str(); };
+  std::string getTripletCuts()    { return tripletCuts.c_str(); };
+  std::string getSignalScale()    { return std::to_string( SignalScale); };
+  std::string getLumi(int prec=1) {
+    if (Luminosity > 100)
+      prec = 0;
+    return (std::stringstream() << std::fixed << std::setprecision(prec) << Luminosity).str();
+  };
+
+  virtual std::string getTopLabel() { return ("UL"+getyear()+", "+getLumi(1)+" fb^{-1} (13 TeV)"); };
+  virtual std::string getyear() { return year; };
 
   std::string getDeepTauVsEl(  bool=false); // for inverting
   std::string getDeepTauVsMu(  bool=false);
@@ -233,30 +249,54 @@ public:
   void NoSignalRegion();
   void UnsetSignalRegionVars();
   void MuonControlRegion();
-  void QCDControlRegion();
+  void QCDControlRegion(bool=true);
+  void Blind( std::vector<double>);
   // void SetSignalChain( TObject* chain);
+  void SetProcessChain();
   void SetDataChain();
   void UseFullSamples( std::string s="");
   void setPalette( int);
   // 3744 is a nice hash pattern
-  void setHistFillStyle(int); 
-  void setSignalFillStyle(int);
+  void setHistFillStyle(int=1001); 
+  void setSignalFillStyle(int=1001);
   void setDeepTauBinning();
 
-  void SetWeights();
+  // Important Draw() Functions
+  void DrawProcess(std::string, std::string);
+  void DrawData(std::string);
+  
   void MergeFiles();
-  void FillFiles();
-  void FillGenFiles2016();
+  void PrintYields(); // overloaded to just print field hists
+  void PrintYields( std::map<std::string, std::vector<std::string>>, int, std::string="");
+  void CalculateYields( std::map<std::string, TH1*>, std::map<std::string, std::vector<std::string>>*);
+  void getYieldsAndEntries( std::map<std::string, TH1*>, TLegend* = 0);
   int MergeSamples( std::map<std::string, TH1*>*);
-  // std::map<std::string, TH1F*> MergeSamples( std::map<std::string, TH1F*> phists);
   void UseNormWeight( std::string);
   void UseBasicSelection() { manualCutString = basicSelection; };
 
+  // ******************************
+  // *** Defined in other files ***
+  // ******************************
+  
+  // Getters in Colors.cc
+  int getColors( std::string);
+  int getHistFillStyle()     { return histFillStyle; };
+  int getSignalFillStyle()   { return signalFillStyle; };
+  const char* getSignalFill();
+  const char* getHistFill();
+  
+  // FillFiles.cc
+  void SetWeights();
+  void FillFiles(std::string);
+  void FillFiles();
+  void FillSignalStitch();
+  void FillDYStitch(std::string);
+  void FillGenFiles2016();
+
   // Big Boys in their own files
-  // std::map<std::string, TH1*> SimplePlot();
-  void SimplePlot();
-  TH1* doQCDestimation();
-  float CalcChi2(TH1*, TH1*);
+  void SimplePlot(); // SimplePlot.cc
+  void doQCDestimation(); // doQCDestimation.cc
+  float CalcChi2(TH1*, TH1*); // doQCDestimation.cc
 };
 
 #endif

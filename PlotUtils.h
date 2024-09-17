@@ -19,10 +19,11 @@ void makePlot( std::map<std::string, TH1*>, PlotBus*);
 void makeRegionPlot( std::map<std::string, TH1*>, PlotBus*, std::string);
 
 // Helpers
-void drawTallest( TList*, PlotBus*);
-THStack* sortStack( TList*);
+TObject* drawTallest( TList*, PlotBus*, TCanvas*);
+THStack* sortStack( TList*, PlotBus*);
 float getMaximumWithErrors( TH1*);
 TH1* getStackSum(THStack*);
+void drawTwoDimensional( TList*, PlotBus*, TCanvas*);
 void drawTopLabel( std::string, TCanvas*);
 void drawInfoLabels( PlotBus*, TCanvas*);
 void drawCMSLabel();

@@ -6,9 +6,21 @@
 
 #include "PlotBus.h"
 
-void PlotBus::FillFiles( ) {
+void PlotBus::FillFiles(std::string year) {
+  std::string saveYear = PlotBus::year;
+  setupYear( year);
+  FillFiles();
+  setupYear( saveYear);
   SetWeights();
-  if (manualFiles) {
+}
+
+void PlotBus::FillFiles( ) {
+  std::cout << ">>> Prefix:  " << prefix << std::endl;
+  std::cout << ">>> Era:     " << era << std::endl;
+  std::cout << ">>> Channel: " << channel << std::endl;
+  std::cout << ">>> Outpath: " << filepath << std::endl;
+  
+  if (manualFiles) { // 
     std::cout << "*** Using Manual Files *** " << std::endl;
     for (const auto &sig : signalfiles) {
       for (int i = 0; i < sig.second.size(); ++i)
@@ -22,33 +34,49 @@ void PlotBus::FillFiles( ) {
       std::cout << datafiles[i] << std::endl;
     return;
   }
-  
-  std::cout << ">>> Prefix:  " << prefix << std::endl;
-  std::cout << ">>> Era:     " << era << std::endl;
-  std::cout << ">>> Channel: " << channel << std::endl;
+
+  SetWeights();
 
   for (std::string dtera : PlotBus::dataTakingEras) {
     if (verbosity > 0)
       std::cout << "Adding Data Taking Era: " << dtera << std::endl;
-    datafiles.push_back( prefix + era + "/Data/Tau_Run" + year + dtera + "_"  + channel + ".root");
+    if (year.find("_") != std::string::npos)
+      datafiles.push_back( prefix + era + "/Data/Tau_Run2016" + dtera + "_"  + channel + ".root");
+    else
+      // datafiles.push_back( prefix + era + "/Data/Tau_Run" + year + dtera + "_Wto3pi_2018.root");
+      datafiles.push_back( prefix + era + "/Data/Tau_Run" + year + dtera + "_" + channel + ".root");
   }
+
+  // NNLO PRIVATE PRODUCTION
+  signalfiles["WJetsTo3Pi_Plus"].push_back( prefix + era + "/Wto3pi/SignalWJetsTo3Pi_Plus_" + channel + ".root");
+  signalfiles["WJetsTo3Pi_Minus"].push_back( prefix + era + "/Wto3pi/SignalWJetsTo3Pi_Minus_" + channel + ".root");
   
   // NLO PRIVATE PRODUCTION
   // BE CAREFUL WITH THE NUMBER OF PARTS, THIS WILL CHANGE FOR FULL SAMPLES
-  signalfiles["WJetsTo3Pi_0J"].push_back( prefix + era + "/Wto3pi/SignalW0JetsTo3Pi_" + channel + ".root");
-  signalfiles["WJetsTo3Pi_1J"].push_back( prefix + era + "/Wto3pi/SignalW1JetsTo3Pi_" + channel + ".root");
-  signalfiles["WJetsTo3Pi_2J"].push_back( prefix + era + "/Wto3pi/SignalW2JetsTo3Pi_" + channel + ".root");
-  signalfiles["WJetsTo3Pi_Incl"].push_back( prefix + era + "/Wto3pi/SignalWJetsTo3Pi_" + channel + ".root");
+  // signalfiles["WJetsTo3Pi_0J"].push_back( prefix + era + "/Wto3pi/SignalW0JetsTo3Pi_" + channel + ".root");
+  // signalfiles["WJetsTo3Pi_1J"].push_back( prefix + era + "/Wto3pi/SignalW1JetsTo3Pi_" + channel + ".root");
+  // signalfiles["WJetsTo3Pi_2J"].push_back( prefix + era + "/Wto3pi/SignalW2JetsTo3Pi_" + channel + ".root");
+  // signalfiles["WJetsTo3Pi_Incl"].push_back( prefix + era + "/Wto3pi/SignalWJetsTo3Pi_" + channel + ".root");
   
   // LEADING ORDER
   signalfiles["Wto3pi_LO"].push_back( prefix + era + "/Wto3pi/SignalWto3pi_" + channel + ".root");
-  
-  bkgfiles["DY"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_" + channel + ".root");
-  bkgfiles["DY"].push_back( prefix + era + "/DY/DY1JetsToLL_M-50_" + channel + ".root");
-  bkgfiles["DY"].push_back( prefix + era + "/DY/DY2JetsToLL_M-50_" + channel + ".root");
-  bkgfiles["DY"].push_back( prefix + era + "/DY/DY3JetsToLL_M-50_" + channel + ".root");
-  bkgfiles["DY"].push_back( prefix + era + "/DY/DY4JetsToLL_M-50_" + channel + ".root");
-  bkgfiles["DY10"].push_back( prefix + era + "/DY/DYJetsToLL_M-10to50_" + channel + ".root");
+
+  bkgfiles["DY"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_NLO_" + channel + ".root");
+  bkgfiles["DY"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt0-50_NLO_" + channel + ".root");
+  bkgfiles["DY"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt50-100_NLO_" + channel + ".root");
+  bkgfiles["DY"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt100-250_NLO_" + channel + ".root");
+  bkgfiles["DY"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt250-400_NLO_" + channel + ".root");
+  bkgfiles["DY"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt400-650_NLO_" + channel + ".root");
+  bkgfiles["DY"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt650-Inf_NLO_" + channel + ".root");
+  bkgfiles["DY10"].push_back( prefix + era + "/DY/DYJetsToLL_M-10to50_NLO_" + channel + ".root");
+
+  // Old LO files
+  bkgfiles["DY_LO"].push_back( prefix + era + "/DY_LO/DYJetsToLL_M-50_" + channel + ".root");
+  bkgfiles["DY_LO"].push_back( prefix + era + "/DY_LO/DY1JetsToLL_M-50_" + channel + ".root");
+  bkgfiles["DY_LO"].push_back( prefix + era + "/DY_LO/DY2JetsToLL_M-50_" + channel + ".root");
+  bkgfiles["DY_LO"].push_back( prefix + era + "/DY_LO/DY3JetsToLL_M-50_" + channel + ".root");
+  bkgfiles["DY_LO"].push_back( prefix + era + "/DY_LO/DY4JetsToLL_M-50_" + channel + ".root");
+  bkgfiles["DY10_LO"].push_back( prefix + era + "/DY_LO/DYJetsToLL_M-10to50_" + channel + ".root");
     
   bkgfiles["ST"].push_back( prefix + era + "/ST/ST_t-channel_antitop_" + channel + ".root");
   bkgfiles["ST"].push_back( prefix + era + "/ST/ST_t-channel_top_" + channel + ".root");
@@ -116,8 +144,31 @@ void PlotBus::FillFiles( ) {
     bkgfiles["TTToHadronic_Up"].push_back( prefix + era + "/TT/TTToHadronic_" + channel + "_TuneUp.root");
     bkgfiles["TTToHadronic_Down"].push_back( prefix + era + "/TT/TTToHadronic_" + channel + "_TuneDown.root");
   }
+}
 
-  MergeFiles();
+void PlotBus::FillSignalStitch() {
+  SetWeights();
+  signalfiles["WJetsTo3Pi_0J"].push_back( prefix + era + "/Wto3pi/SignalW0JetsTo3Pi_" + channel + ".root");
+  signalfiles["WJetsTo3Pi_1J"].push_back( prefix + era + "/Wto3pi/SignalW1JetsTo3Pi_" + channel + ".root");
+  signalfiles["WJetsTo3Pi_2J"].push_back( prefix + era + "/Wto3pi/SignalW2JetsTo3Pi_" + channel + ".root");
+  signalfiles["WJetsTo3Pi_Incl"].push_back( prefix + era + "/Wto3pi/SignalWJetsTo3Pi_" + channel + ".root");
+
+  datafiles.push_back( prefix + era + "/Wto3pi/SignalWJetsTo3Pi_" + channel + ".root");
+}
+
+void PlotBus::FillDYStitch(std::string year) {
+  setupYear(year);
+  SetWeights();
+  manualFiles = true;
+  bkgfiles["DY_Inclusive_NLO"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_NLO_" + channel + ".root");
+  bkgfiles["DY_Pt0-50_NLO"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt0-50_NLO_" + channel + ".root");
+  bkgfiles["DY_Pt50-100_NLO"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt50-100_NLO_" + channel + ".root");
+  bkgfiles["DY_Pt100-250_NLO"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt100-250_NLO_" + channel + ".root");
+  bkgfiles["DY_Pt250-400_NLO"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt250-400_NLO_" + channel + ".root");
+  bkgfiles["DY_Pt400-650_NLO"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt400-650_NLO_" + channel + ".root");
+  bkgfiles["DY_Pt650-Inf_NLO"].push_back( prefix + era + "/DY/DYJetsToLL_M-50_Pt650-Inf_NLO_" + channel + ".root");
+
+  datafiles.push_back( prefix + era + "/DY/DYJetsToLL_M-50_NLO_" + channel + ".root");
 }
 
 // Full Generated Signals (unprocessed)

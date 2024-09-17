@@ -10,19 +10,22 @@ class PlotTrain : public PlotBus {
  public:
   // Constructors
   PlotTrain();
+  PlotTrain( std::string);
+  PlotTrain( std::string, std::string , std::string);
   PlotTrain( std::vector<std::string>);
 
   // Fields
+  bool singleyear;
+  bool drawAllYears;
   std::string yearName;
   std::vector<std::string> years;
   std::vector<PlotBus*> train;
 
   // Member Functions
-  // std::map<std::string, TH1F*> SimplePlot();
   void SimplePlot();
   void AddToHists( std::pair<std::string, TH1*>);
   std::string getyear();
-  const char* getTopLabel();
+  std::string getTopLabel();
 };
 
 #endif
