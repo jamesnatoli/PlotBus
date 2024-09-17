@@ -1,7 +1,7 @@
 ODIR=obj
 RCOMP=`root-config --cflags`
 RCOMPLIB=`root-config --cflags --glibs`
-CXXFLAGS=-g -std=c++11 -Wall -pedantic -Wno-unused-variable -I/usr/local/opt/libomp/include
+CXXFLAGS=-g -std=c++17 -Wall -pedantic -Wno-unused-variable -I/usr/local/opt/libomp/include
 
 _OBJ = PlotBus.o SetWeights.o FillFiles.o PlotTrain.o Colors.o PlotUtils.o Analyzers.o SimplePlot.o doQCDestimation.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))	
@@ -9,6 +9,14 @@ OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 # Executables
 invmass: runners/InvMass.cc $(OBJ)
 	g++ $(CXXFLAGS) $(RCOMPLIB) -o bin/invmass $^
+jetpt:   runners/JetpT.cc $(OBJ)
+	g++ $(CXXFLAGS) $(RCOMPLIB) -o bin/jetpt $^
+validation:   runners/multijetValidation.cc $(OBJ)
+	g++ $(CXXFLAGS) $(RCOMPLIB) -o bin/val $^
+test:    runners/test.cc $(OBJ)
+	g++ $(CXXFLAGS) $(RCOMPLIB) -o bin/test $^
+plot2d:  runners/plot2D.cc $(OBJ)
+	g++ $(CXXFLAGS) $(RCOMPLIB) -o bin/plot2d $^	
 
 # PlotBus 
 $(ODIR)/PlotBus.o: PlotBus.cc PlotBus.h
@@ -35,6 +43,6 @@ $(ODIR)/doQCDestimation.o: doQCDestimation.cc PlotBus.h $(ODIR)/PlotBus.o
 
 # and clean
 clean:
-	rm -f bin/*
+	rm -rf bin/*
 	rm $(ODIR)/*.o
 
