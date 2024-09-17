@@ -7,7 +7,7 @@
 
 #include "Analyzers.h"
 
-// Do some cut analysis
+// Do some cut analysis (not really used)
 void analyze( TH1* sighist, float cut) {
   std::cout << "\nAnalyzing Cuts..." << std::endl;
   float cutregionAbove = 0.0, cutregionBelow = 0.0;
@@ -24,7 +24,7 @@ void analyze( TH1* sighist, float cut) {
   std::cout << "Sig Eff of <" << cut << " cut: " << cutregionBelow / normal << std::endl;
 }
 
-// Get Signal signifigance for each bin
+// Get Signal signifigance for each bin (also not really used)
 void signalSignifigance( TH1* sighist, THStack* others, PlotBus* pb) {
   std::cout << "Calculating bin significance... " << std::endl;
   if ((!sighist) || (!others)) {
@@ -54,78 +54,6 @@ void signalSignifigance( TH1* sighist, THStack* others, PlotBus* pb) {
   binSig->Draw("e");
   binSig->SaveAs( (pb->filename + "_binSig.C").c_str());
   c1->SaveAs( (pb->filename + "_binSig.png").c_str());
-}
-
-void printYields( std::map<std::string, std::vector<std::string>> yields, int prec, std::string text) {
-  // TODO: get maximum length for process, yields, and entries :/
-  int offsets[3] = { 20, 10, 7};
-  text = (text!="") ? (": " + text) : "";
-  std::cout << "    *** Yields Table" << text << " ***" << std::endl;
-  std::cout << std::setw(offsets[0]) << std::left
-	    << "Process" << ", "
-	    << std::setw(offsets[1] + prec) << std::right
-	    << "Yield" << ", "
-	    << std::setw(offsets[2]) << std::right
-	    << "Entries" 
-	    << std::endl;
-  std::cout << "--------------------------------------------" << std::endl;
-  for (auto const& yld : yields) {
-    std::cout << std::setw(offsets[0]) << std::left
-	      << yld.first << ", "
-	      << std::setw(offsets[1] + prec) << std::right
-	      << yld.second[0] << ", "
-	      << std::setw(offsets[2]) << std::right
-	      << yld.second[1]
-	      << std::endl;
-  }
-}
-
-void CalculateYields( std::map<std::string, TH1*> hists, std::map<std::string, std::vector<std::string>>* yields,
-		      TLegend* legend, PlotBus* pb, int prec) {
-  std::stringstream integ;
-  // Loop over only the backgrounds that we want to plot
-  for (auto const& hist : hists) {
-    if (pb->overflow) {
-      integ << std::fixed << std::setprecision( prec) << hist.second->Integral( 0, hist.second->GetNbinsX()+1);
-      std::vector<std::string> vec{ integ.str(), std::to_string( (int)hist.second->GetEntries() +
-							    (int)hist.second->GetBinContent( hist.second->GetNbinsX()+1))};
-      (*yields)[hist.first] = vec;
-    } else {
-      integ << std::fixed << std::setprecision( prec) << hist.second->GetSumOfWeights();
-      std::vector<std::string> vec{ integ.str(), std::to_string( (int)hist.second->GetEntries())};
-      (*yields)[hist.first] = vec;
-    }
-
-    std::string legendTitle = hist.first;
-    if (pb->legendYield)
-      legendTitle += " ("+integ.str()+")";
-
-    // Now add to legend
-    // TODO: fix this special signal functionality...
-    // "W->3#pi, B=10^-"+pb->getSignalScale()
-    if (std::find( pb->signals.begin(), pb->signals.end(), hist.first) != pb->signals.end()) {
-      legend->AddEntry( hist.second, (legendTitle).c_str(), pb->getSignalFill());
-      // legend->AddEntry( hist.second, (legendTitle).c_str(), "f");
-    } else if (hist.first == pb->dataName) {
-      legend->AddEntry( hist.second, (legendTitle).c_str(),"lep");
-    } else {
-      legend->AddEntry( hist.second, (legendTitle).c_str(), pb->getHistFill());
-    }
-    
-    // Reset the stringstream
-    integ.str( std::string());
-  }
-}
-
-void getYieldsAndEntries( std::map<std::string, TH1*> hists, TLegend* legend,
-			  PlotBus* pb) {
-  std::map<std::string, std::vector<std::string>> yields = {};
-
-  if (pb->verbosity > 1) std::cout << ">>> Getting Yields and Entries..." << std::endl;
-  int precision = 3;
-  CalculateYields( hists, &yields, legend, pb, precision);
-  if (pb->verbosity >= 0)
-    printYields( yields, precision, pb->currentRegion);
 }
 
 #endif
